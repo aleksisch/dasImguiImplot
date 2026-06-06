@@ -280,6 +280,58 @@ def public plot_dummy(label_id : string; flags : ImPlotDummyFlags = ImPlotDummyF
     PlotDummy(label_id, flags)
 }
 
+// ===== Statistical / 2D items =====
+
+def public plot_error_bars(label_id : string; xs : array<auto(T)>; ys : array<T>; err : array<T>;
+                           flags : int = 0) {
+    //! `PlotErrorBars(label_id, xs, ys, err, flags)` — symmetric error bars (±err) on each point.
+    PlotErrorBars(label_id, xs, ys, err, flags)
+}
+def public plot_error_bars(label_id : string; xs : array<auto(T)>; ys : array<T>;
+                           neg : array<T>; pos : array<T>; flags : int = 0) {
+    //! `PlotErrorBars(label_id, xs, ys, neg, pos, flags)` — asymmetric error bars (−neg / +pos).
+    PlotErrorBars(label_id, xs, ys, neg, pos, flags)
+}
+
+def public plot_digital(label_id : string; xs : array<auto(T)>; ys : array<T>; flags : int = 0) {
+    //! `PlotDigital(...)` — a boolean / step signal pinned to the plot bottom (ignores y zoom).
+    PlotDigital(label_id, xs, ys, flags)
+}
+
+def public plot_heatmap(label_id : string; values : array<float> | array<double> | array<int>;
+                        rows : int; cols : int; scale_min : double = 0.0lf; scale_max : double = 0.0lf;
+                        label_fmt : string = "%.1f";
+                        bounds_min : float2 = float2(0.0f, 0.0f);
+                        bounds_max : float2 = float2(1.0f, 1.0f); flags : int = 0) {
+    //! `PlotHeatmap(...)` — a rows×cols grid of `values` (row-major). scale_min==scale_max
+    //! (both 0) auto-scales the colormap. Pass `label_fmt=""` to draw no per-cell labels.
+    PlotHeatmap(label_id, values, rows, cols, scale_min, scale_max, label_fmt,
+                double(bounds_min.x), double(bounds_min.y),
+                double(bounds_max.x), double(bounds_max.y), flags)
+}
+
+// Named `histogram` (not `plot_histogram`) — dasImgui's imgui_boost_v2 already owns the
+// `plot_histogram` widget name (ImGui's sparkline histogram) via a call-macro. This is
+// ImPlot's statistical histogram, a different thing.
+def public histogram(label_id : string; values : array<float> | array<double> | array<int>;
+                     bins : int = int(ImPlotBin.Sturges); bar_scale : double = 1.0lf;
+                     range_min : double = 0.0lf; range_max : double = 0.0lf;
+                     flags : int = 0) : double {
+    //! `PlotHistogram(...)` — 1D histogram; returns the largest bin count (or density with the
+    //! Density flag). `bins` is a positive count OR an ImPlotBin method cast to int.
+    //! range_min==range_max auto-ranges to the data.
+    return PlotHistogram(label_id, values, bins, bar_scale, range_min, range_max, flags)
+}
+
+def public histogram2d(label_id : string; xs : array<auto(T)>; ys : array<T>;
+                       x_bins : int = int(ImPlotBin.Sturges); y_bins : int = int(ImPlotBin.Sturges);
+                       x_min : double = 0.0lf; x_max : double = 0.0lf;
+                       y_min : double = 0.0lf; y_max : double = 0.0lf; flags : int = 0) : double {
+    //! `PlotHistogram2D(...)` — bivariate histogram heatmap; returns the largest bin count.
+    //! An all-zero range auto-ranges to the data.
+    return PlotHistogram2D(label_id, xs, ys, x_bins, y_bins, x_min, x_max, y_min, y_max, flags)
+}
+
 // ===== Coordinate conversion =====
 
 def public plot_to_pixels(x : double; y : double;

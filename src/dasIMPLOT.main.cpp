@@ -62,6 +62,48 @@ FWD_SHADED(f, float) FWD_SHADED(d, double) FWD_SHADED(i, int32_t)
         ImPlot::PlotInfLines(l, (const T*)v.data, (int)v.size, flags); }
 FWD_INFLINES(f, float) FWD_INFLINES(d, double) FWD_INFLINES(i, int32_t)
 
+// ===== Templated item families (statistical / 2D) =====
+// Same template-skip story as the line family. Struct args (ImPlotPoint / ImPlotRange /
+// ImPlotRect) are flattened to scalar doubles so the daslang surface stays vector-free.
+// label_fmt: an empty das string maps to nullptr — ImPlot's "draw no cell/slice labels".
+static inline const char* implot_nz(const char* s) { return (s && s[0]) ? s : nullptr; }
+
+// ErrorBars: symmetric (err) + asymmetric (neg/pos)
+#define FWD_ERRORBARS(SUF, T) \
+    void PlotErrorBars_sym_##SUF(const char* l, const TArray<T>& xs, const TArray<T>& ys, const TArray<T>& err, int flags) { \
+        ImPlot::PlotErrorBars(l, (const T*)xs.data, (const T*)ys.data, (const T*)err.data, IMPLOT_N2(xs, ys), flags); } \
+    void PlotErrorBars_asym_##SUF(const char* l, const TArray<T>& xs, const TArray<T>& ys, const TArray<T>& neg, const TArray<T>& pos, int flags) { \
+        ImPlot::PlotErrorBars(l, (const T*)xs.data, (const T*)ys.data, (const T*)neg.data, (const T*)pos.data, IMPLOT_N2(xs, ys), flags); }
+FWD_ERRORBARS(f, float) FWD_ERRORBARS(d, double) FWD_ERRORBARS(i, int32_t)
+
+// Digital: xs/ys step signal
+#define FWD_DIGITAL(SUF, T) \
+    void PlotDigital_##SUF(const char* l, const TArray<T>& xs, const TArray<T>& ys, int flags) { \
+        ImPlot::PlotDigital(l, (const T*)xs.data, (const T*)ys.data, IMPLOT_N2(xs, ys), flags); }
+FWD_DIGITAL(f, float) FWD_DIGITAL(d, double) FWD_DIGITAL(i, int32_t)
+
+// Heatmap: flat row-major values, rows x cols, scalar bounds rect
+#define FWD_HEATMAP(SUF, T) \
+    void PlotHeatmap_##SUF(const char* l, const TArray<T>& v, int rows, int cols, double scale_min, double scale_max, \
+                           const char* label_fmt, double bx0, double by0, double bx1, double by1, int flags) { \
+        ImPlot::PlotHeatmap(l, (const T*)v.data, rows, cols, scale_min, scale_max, implot_nz(label_fmt), \
+                            ImPlotPoint(bx0, by0), ImPlotPoint(bx1, by1), flags); }
+FWD_HEATMAP(f, float) FWD_HEATMAP(d, double) FWD_HEATMAP(i, int32_t)
+
+// Histogram (1D): returns max bin count; range (min==max) => auto-range
+#define FWD_HISTOGRAM(SUF, T) \
+    double PlotHistogram_##SUF(const char* l, const TArray<T>& v, int bins, double bar_scale, double range_min, double range_max, int flags) { \
+        return ImPlot::PlotHistogram(l, (const T*)v.data, (int)v.size, bins, bar_scale, ImPlotRange(range_min, range_max), flags); }
+FWD_HISTOGRAM(f, float) FWD_HISTOGRAM(d, double) FWD_HISTOGRAM(i, int32_t)
+
+// Histogram2D: returns max bin count; rect (all zero) => auto-range
+#define FWD_HISTOGRAM2D(SUF, T) \
+    double PlotHistogram2D_##SUF(const char* l, const TArray<T>& xs, const TArray<T>& ys, int x_bins, int y_bins, \
+                                 double x0, double x1, double y0, double y1, int flags) { \
+        return ImPlot::PlotHistogram2D(l, (const T*)xs.data, (const T*)ys.data, IMPLOT_N2(xs, ys), x_bins, y_bins, \
+                                       ImPlotRect(x0, x1, y0, y1), flags); }
+FWD_HISTOGRAM2D(f, float) FWD_HISTOGRAM2D(d, double) FWD_HISTOGRAM2D(i, int32_t)
+
 void Module_dasIMPLOT::initAotAlias () {
 }
 
@@ -98,6 +140,28 @@ void Module_dasIMPLOT::initAotAlias () {
     addExtern<DAS_BIND_FUN(das::PlotInfLines_v_##SUF)>(*this, lib, "PlotInfLines", \
         SideEffects::modifyExternal, "das::PlotInfLines_v_" #SUF)->args({"label","values","flags"});
 
+#define REG_ERRORBARS(SUF) \
+    addExtern<DAS_BIND_FUN(das::PlotErrorBars_sym_##SUF)>(*this, lib, "PlotErrorBars", \
+        SideEffects::modifyExternal, "das::PlotErrorBars_sym_" #SUF)->args({"label","xs","ys","err","flags"}); \
+    addExtern<DAS_BIND_FUN(das::PlotErrorBars_asym_##SUF)>(*this, lib, "PlotErrorBars", \
+        SideEffects::modifyExternal, "das::PlotErrorBars_asym_" #SUF)->args({"label","xs","ys","neg","pos","flags"});
+
+#define REG_DIGITAL(SUF) \
+    addExtern<DAS_BIND_FUN(das::PlotDigital_##SUF)>(*this, lib, "PlotDigital", \
+        SideEffects::modifyExternal, "das::PlotDigital_" #SUF)->args({"label","xs","ys","flags"});
+
+#define REG_HEATMAP(SUF) \
+    addExtern<DAS_BIND_FUN(das::PlotHeatmap_##SUF)>(*this, lib, "PlotHeatmap", \
+        SideEffects::modifyExternal, "das::PlotHeatmap_" #SUF)->args({"label","values","rows","cols","scale_min","scale_max","label_fmt","bx0","by0","bx1","by1","flags"});
+
+#define REG_HISTOGRAM(SUF) \
+    addExtern<DAS_BIND_FUN(das::PlotHistogram_##SUF)>(*this, lib, "PlotHistogram", \
+        SideEffects::modifyExternal, "das::PlotHistogram_" #SUF)->args({"label","values","bins","bar_scale","range_min","range_max","flags"});
+
+#define REG_HISTOGRAM2D(SUF) \
+    addExtern<DAS_BIND_FUN(das::PlotHistogram2D_##SUF)>(*this, lib, "PlotHistogram2D", \
+        SideEffects::modifyExternal, "das::PlotHistogram2D_" #SUF)->args({"label","xs","ys","x_bins","y_bins","x0","x1","y0","y1","flags"});
+
 void Module_dasIMPLOT::initMain () {
     REG_LINELIKE_ALL(PlotLine)
     REG_LINELIKE_ALL(PlotScatter)
@@ -106,6 +170,11 @@ void Module_dasIMPLOT::initMain () {
     REG_STEMS(f) REG_STEMS(d) REG_STEMS(i)
     REG_SHADED(f) REG_SHADED(d) REG_SHADED(i)
     REG_INFLINES(f) REG_INFLINES(d) REG_INFLINES(i)
+    REG_ERRORBARS(f) REG_ERRORBARS(d) REG_ERRORBARS(i)
+    REG_DIGITAL(f) REG_DIGITAL(d) REG_DIGITAL(i)
+    REG_HEATMAP(f) REG_HEATMAP(d) REG_HEATMAP(i)
+    REG_HISTOGRAM(f) REG_HISTOGRAM(d) REG_HISTOGRAM(i)
+    REG_HISTOGRAM2D(f) REG_HISTOGRAM2D(d) REG_HISTOGRAM2D(i)
 
     // const ImVec2&/ImVec4& -> by value (so daslang passes float2/float4 by value);
     // mirrors dasImguiNodeEditor's initMain fixup.
