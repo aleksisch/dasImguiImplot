@@ -8,6 +8,14 @@
 #include "need_dasIMPLOT.h"
 #include "aot_dasIMPLOT.h"
 
+// implot_internal.h for the legend telemetry forwarders below (GetCurrentPlot / ImPlotItemGroup).
+// IMGUI_DEFINE_MATH_OPERATORS so the ImVec2 math in imgui_internal.h's inline helpers compiles,
+// mirroring implot.cpp's own include preamble.
+#ifndef IMGUI_DEFINE_MATH_OPERATORS
+#define IMGUI_DEFINE_MATH_OPERATORS
+#endif
+#include <implot_internal.h>
+
 namespace das {
 
 // ImPlot's Plot* functions are C++ templates; libclang skips them in the binder, so we
@@ -126,6 +134,42 @@ FWD_BARGROUPS(f, float) FWD_BARGROUPS(d, double) FWD_BARGROUPS(i, int32_t)
                              x, y, radius, implot_nz(label_fmt), angle0, flags); }
 FWD_PIECHART(f, float) FWD_PIECHART(d, double) FWD_PIECHART(i, int32_t)
 
+// ===== Legend telemetry (read AFTER EndPlot, by plot title) =====
+// ImPlot keeps per-series visibility (ImPlotItem::Show) and the per-entry legend button rect
+// internal, and BOTH are written DURING EndPlot's legend render (ShowLegendEntries) — so the v2
+// `plot` scope reads them right AFTER EndPlot via GetPlot(title), which gives current-frame
+// values (the plot persists past EndPlot; Legend.Indices isn't reset until the next BeginPlot).
+// Reading before EndPlot would serialize last frame's rects (zero on the first visible frame,
+// stale after a resize), so the title-keyed post-EndPlot read is the correct one. The scope
+// serializes a per-series {label, shown, rect} list into the snapshot so a test / recording can
+// target a synthetic legend-toggle click and verify the series hid / showed. `index` is always
+// submission order — GetLegendItem/Label index Legend.Indices; the Sort flag only reorders the
+// render pass, not this. The rect is screen-space pixels (LegendHoverRect, patched to update
+// every frame — see implot.cpp). All return empty / zero when the plot or index is unknown.
+int LegendEntryCount(const char* title) {
+    ImPlotPlot* plot = ImPlot::GetPlot(title);
+    return plot ? plot->Items.GetLegendCount() : 0;
+}
+const char* LegendEntryLabel(const char* title, int index) {
+    ImPlotPlot* plot = ImPlot::GetPlot(title);
+    if (!plot || index < 0 || index >= plot->Items.GetLegendCount()) return "";
+    return plot->Items.GetLegendLabel(index);
+}
+bool LegendEntryShown(const char* title, int index) {
+    ImPlotPlot* plot = ImPlot::GetPlot(title);
+    if (!plot || index < 0 || index >= plot->Items.GetLegendCount()) return false;
+    ImPlotItem* item = plot->Items.GetLegendItem(index);
+    return item ? item->Show : false;
+}
+ImVec4 LegendEntryRect(const char* title, int index) {
+    ImPlotPlot* plot = ImPlot::GetPlot(title);
+    if (!plot || index < 0 || index >= plot->Items.GetLegendCount()) return ImVec4(0, 0, 0, 0);
+    ImPlotItem* item = plot->Items.GetLegendItem(index);
+    if (!item) return ImVec4(0, 0, 0, 0);
+    const ImRect& r = item->LegendHoverRect;
+    return ImVec4(r.Min.x, r.Min.y, r.Max.x, r.Max.y);
+}
+
 void Module_dasIMPLOT::initAotAlias () {
 }
 
@@ -207,6 +251,16 @@ void Module_dasIMPLOT::initMain () {
     REG_HISTOGRAM2D(f) REG_HISTOGRAM2D(d) REG_HISTOGRAM2D(i)
     REG_BARGROUPS(f) REG_BARGROUPS(d) REG_BARGROUPS(i)
     REG_PIECHART(f) REG_PIECHART(d) REG_PIECHART(i)
+
+    // Legend telemetry — pure reads of a plot's internal item/legend state, keyed by title.
+    addExtern<DAS_BIND_FUN(das::LegendEntryCount)>(*this, lib, "LegendEntryCount",
+        SideEffects::accessExternal, "das::LegendEntryCount")->args({"title"});
+    addExtern<DAS_BIND_FUN(das::LegendEntryLabel)>(*this, lib, "LegendEntryLabel",
+        SideEffects::accessExternal, "das::LegendEntryLabel")->args({"title", "index"});
+    addExtern<DAS_BIND_FUN(das::LegendEntryShown)>(*this, lib, "LegendEntryShown",
+        SideEffects::accessExternal, "das::LegendEntryShown")->args({"title", "index"});
+    addExtern<DAS_BIND_FUN(das::LegendEntryRect)>(*this, lib, "LegendEntryRect",
+        SideEffects::accessExternal, "das::LegendEntryRect")->args({"title", "index"});
 
     // const ImVec2&/ImVec4& -> by value (so daslang passes float2/float4 by value);
     // mirrors dasImguiNodeEditor's initMain fixup.

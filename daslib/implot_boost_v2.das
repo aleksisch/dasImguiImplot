@@ -34,6 +34,19 @@ def private finalize_state(widget_ident : string; kind : string; var state : aut
 
 // ===== Plot scope snapshot =====
 
+struct LegendEntry {
+    //! One legend entry of a `plot` scope, captured per frame into `PlotScopeState.legend`.
+    //! Lets a test / recording target a synthetic legend-toggle click (`legend_toggle`) at the
+    //! exact rect ImPlot hit-tests, and verify the series hid / showed (`shown`). The rect is
+    //! screen-space pixels `[x0,y0]`–`[x1,y1]`; entries are in legend (submission) order.
+    series : string                 //! series label (the `label_id` passed to plot_line / etc.); `label` is a reserved word
+    shown : bool                    //! series currently visible (false after a legend-toggle hide)
+    x0 : float                      //! clickable button rect, screen px — left
+    y0 : float                      //! top
+    x1 : float                      //! right
+    y1 : float                      //! bottom
+}
+
 struct PlotScopeState {
     //! Per-frame snapshot of a `plot` scope, pasted into the widget's snapshot
     //! payload by `stateless_finalize`. Geometry is screen-space pixels;
@@ -50,6 +63,32 @@ struct PlotScopeState {
     @optional mouse_x : double      //! GetPlotMousePos().x (data coords)
     @optional mouse_y : double      //! GetPlotMousePos().y
     visible : bool                  //! BeginPlot returned true (plot drew this frame)
+    legend : array<LegendEntry>     //! per-series legend entries (label / shown / clickable rect), legend order; empty when not visible
+}
+
+def private capture_legend(var state : PlotScopeState; title : string) {
+    // Read the plot's legend into the snapshot AFTER EndPlot, by title — the rect / shown are
+    // written during EndPlot's legend render, so GetPlot(title) gives current-frame values.
+    // Labels come from ImPlot as a fresh string per call, so we (re)build them only when the
+    // entry set changes — rebuilding every frame would churn the heap. Rects / shown are scalars,
+    // refreshed every frame. (A relabel with no count change would read stale — exotic for a
+    // steady plot, and the rect / shown stay live regardless.)
+    let n = LegendEntryCount(title)
+    if (length(state.legend) != n) {
+        state.legend |> clear()
+        state.legend |> reserve(n)
+        for (i in range(n)) {
+            state.legend |> emplace(LegendEntry(series = LegendEntryLabel(title, i)))
+        }
+    }
+    for (i in range(n)) {
+        let r = LegendEntryRect(title, i)
+        state.legend[i].shown = LegendEntryShown(title, i)
+        state.legend[i].x0 = r.x
+        state.legend[i].y0 = r.y
+        state.legend[i].x1 = r.z
+        state.legend[i].y1 = r.w
+    }
 }
 
 [container]
@@ -84,6 +123,11 @@ def plot(var state : PlotScopeState; title : string; size : float2; flags : ImPl
         }
         box = float4(ppos.x, ppos.y, ppos.x + psz.x, ppos.y + psz.y)
         EndPlot()
+        // AFTER EndPlot: the legend rects / shown are written during EndPlot's render, and
+        // GetPlot(title) still resolves the just-rendered plot, so this captures current-frame.
+        capture_legend(state, title)
+    } else {
+        state.legend |> clear()
     }
     finalize_state(widget_ident, "implot_plot", state, box)
 }

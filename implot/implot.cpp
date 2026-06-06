@@ -653,6 +653,13 @@ bool ShowLegendEntries(ImPlotItemGroup& items, const ImRect& legend_bb, bool hov
 
         ImRect button_bb(icon_bb.Min, label_bb.Max);
 
+        // dasImguiImplot patch: expose each legend entry's clickable button rect every frame
+        // (upstream only writes LegendHoverRect on hover, below). The daslang binding reads this
+        // to target a synthetic legend-toggle click at the exact rect ImPlot hit-tests. Its only
+        // other reader (the drag-drop source ItemAdd, far below) wants the button area too, so an
+        // always-current value is strictly more correct — no behavior lost.
+        item->LegendHoverRect = button_bb;
+
         ImGui::KeepAliveID(item->ID);
 
         bool item_hov = false;
