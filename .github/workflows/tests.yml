@@ -1,0 +1,202 @@
+name: Integration tests
+
+# Headless live-driven integration suite for dasImguiImplot, mirroring
+# dasImguiNodeEditor's tests.yml. ImPlot depends on dasImgui, so CI checks out
+# BOTH packages and installs them in dependency order (dasImgui first — the
+# implot C++ module links dasModuleImgui and uses dasImgui's imgui headers,
+# see CMakeLists.txt). Tests run without a display server via the harness's
+# --headless arm (ImGui context with a CPU font atlas, no GLFW window/GL ctx);
+# the HTTP live-API (port 9090) still serves so the playwright /status+/command+
+# /shutdown flow is unchanged.
+#
+# fail-fast:false so both OSes report. Windows is deferred (see the matrix note).
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: tests-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  integration:
+    runs-on: ${{ matrix.os }}
+    env:
+      # Cache daslang's C++ object compilation across runs (GitHub Actions cache
+      # backend). The daslang build is a full clean rebuild every run — first run
+      # populates, later runs hit. See the "Set up sccache" step + the
+      # CMAKE_*_COMPILER_LAUNCHER flags on the cmake configure below.
+      SCCACHE_GHA_ENABLED: "true"
+    strategy:
+      fail-fast: false
+      matrix:
+        # Start on the POSIX pair (mirrors dasImguiNodeEditor, where windows-latest
+        # fastfails 0xC0000409 on the CI runner only). The implot module builds and
+        # the suite passes locally under MSVC, so Windows is opportunistic: add
+        # windows-latest here once a green run is confirmed. The Windows-only steps
+        # below (Defender exclusion / MSVC env / vcpkg OpenSSL) stay in place, gated
+        # on windows-latest, so re-enabling is a one-line matrix change.
+        os: [ubuntu-latest, macos-latest]
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: "Checkout daslang"
+        uses: actions/checkout@v4
+        with:
+          repository: GaijinEntertainment/daScript
+          path: daslang-src
+          ref: master
+
+      - name: "Checkout dasImgui (dependency)"
+        uses: actions/checkout@v4
+        with:
+          repository: borisbat/dasImgui
+          path: dasImgui
+
+      - name: "Checkout dasImguiImplot"
+        uses: actions/checkout@v4
+        with:
+          path: dasImguiImplot
+
+      - name: "Exclude workspace from Windows Defender (Windows)"
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        continue-on-error: true
+        # Real-time Defender scans every .obj/.exe/.dll the build writes and
+        # every process + DLL load at test time; excluding the workspace cuts
+        # both compile and run wall-time. continue-on-error: a managed-Defender
+        # runner must not fail the job.
+        run: |
+          Add-MpPreference -ExclusionPath "${{ github.workspace }}"
+          Add-MpPreference -ExclusionProcess "daslang.exe"
+          Add-MpPreference -ExclusionProcess "daslang-live.exe"
+
+      - name: "Install system dependencies (Linux)"
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libglfw3-dev \
+            libfreetype6-dev \
+            mesa-common-dev \
+            xorg-dev
+
+      - name: "Install system dependencies (macOS)"
+        if: matrix.os == 'macos-latest'
+        run: |
+          brew install glfw freetype bison
+          echo "/opt/homebrew/opt/bison/bin" >> "$GITHUB_PATH"
+
+      - name: "Install CMake and Ninja"
+        uses: lukka/get-cmake@latest
+
+      - name: "Set up sccache"
+        # Installs the sccache binary and wires the GitHub Actions cache backend
+        # (gated by SCCACHE_GHA_ENABLED at the job level). The cmake configure
+        # below routes cl/clang/gcc through it via CMAKE_*_COMPILER_LAUNCHER.
+        uses: mozilla-actions/sccache-action@v0.0.9
+
+      - name: "Set up MSVC environment (Windows)"
+        if: matrix.os == 'windows-latest'
+        # Put cl.exe / link.exe / lib.exe on PATH so the bash build step can
+        # drive Ninja with MSVC. msvc-dev-cmd exports the dev-env vars to
+        # $GITHUB_ENV, which subsequent bash steps inherit.
+        # MUST run BEFORE the vcpkg step below: msvc-dev-cmd's vcvars sets
+        # VCPKG_ROOT to the VS-bundled vcpkg, so the vcpkg step has to write our
+        # VCPKG_ROOT last for the build to find our prebuilt openssl.
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: "Install OpenSSL via vcpkg (Windows)"
+        if: matrix.os == 'windows-latest'
+        # Runs after msvc-dev-cmd so our VCPKG_ROOT wins (see above).
+        run: |
+          git clone https://github.com/microsoft/vcpkg
+          ./vcpkg/bootstrap-vcpkg.sh
+          ./vcpkg/vcpkg install openssl:x64-windows --binarycaching
+          echo "VCPKG_ROOT=$(pwd)/vcpkg" >> $GITHUB_ENV
+          echo "/c/Strawberry/perl/bin" >> $GITHUB_PATH
+
+      - name: "Build daslang + daslang-live + shared modules"
+        working-directory: daslang-src
+        # Ninja on all three OSes (single-config Release, binaries in bin/).
+        # Windows: cl.exe via msvc-dev-cmd; OpenSSL prebuilt from vcpkg
+        # (toolchain QUOTED — $VCPKG_ROOT can contain spaces). MSBuild was
+        # ~1.5-2x slower here.
+        run: |
+          set -eux
+          if [ "${{ matrix.os }}" = "windows-latest" ]; then
+            cmake --no-warn-unused-cli -B./build \
+              -DCMAKE_BUILD_TYPE:STRING=Release \
+              -DDAS_HV_DISABLED=OFF \
+              -DDAS_PUGIXML_DISABLED=OFF \
+              -DDAS_LLVM_DISABLED=ON \
+              -DDAS_GLFW_DISABLED=OFF \
+              -DCMAKE_C_COMPILER_LAUNCHER=sccache \
+              -DCMAKE_CXX_COMPILER_LAUNCHER=sccache \
+              -DCMAKE_TOOLCHAIN_FILE="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" \
+              -G Ninja
+          else
+            cmake --no-warn-unused-cli -B./build \
+              -DCMAKE_BUILD_TYPE:STRING=Release \
+              -DDAS_HV_DISABLED=OFF \
+              -DDAS_PUGIXML_DISABLED=OFF \
+              -DDAS_LLVM_DISABLED=ON \
+              -DDAS_GLFW_DISABLED=OFF \
+              -DCMAKE_C_COMPILER_LAUNCHER=sccache \
+              -DCMAKE_CXX_COMPILER_LAUNCHER=sccache \
+              -G Ninja
+          fi
+          cmake --build ./build --parallel --target \
+            daslang daslang-live \
+            dasModuleLiveHost dasModuleGlfw dasModuleHV \
+            dasModulePUGIXML dasModuleStbImage
+          sccache --show-stats
+          echo "BIN_DIR=bin" >> "$GITHUB_ENV"
+
+      - name: "daspkg install dasImgui (global)"
+        # dasImgui first — the implot C++ module links dasModuleImgui and uses
+        # dasImgui's imgui headers (CMakeLists.txt resolves it as a sibling).
+        working-directory: daslang-src
+        run: |
+          set -eux
+          ${BIN_DIR}/daslang utils/daspkg/main.das -- install ../dasImgui --global
+
+      - name: "daspkg install dasImguiImplot (global)"
+        working-directory: daslang-src
+        run: |
+          set -eux
+          ${BIN_DIR}/daslang utils/daspkg/main.das -- install ../dasImguiImplot --global
+
+      - name: "Run integration tests (headless)"
+        working-directory: ${{ github.workspace }}/daslang-src
+        # --isolated-mode + --isolated-mode-threads 4: each test runs in its own
+        # subprocess, with 4 in parallel. dastest brands each subprocess argv with
+        # --worker-index N (N in 0..3); with_implot_app is a thin wrapper over
+        # dasImgui's with_imgui_app, which reads --worker-index and derives a
+        # per-worker live-API port (9090 + N), passed to the spawned daslang-live
+        # as --live-port. So the 4 workers bind ports 9090/9091/9092/9093 and don't
+        # race for 9090. Mirrors dasImgui's tests.yml (~3x wall-time reduction).
+        #
+        # No --exclude entries: the implot suite drives all synth IO through the
+        # harness (no GLFW-event-queue synth tests) and stays within libhv's
+        # per-subprocess POST ceiling. Add excludes here if a heavy test is later
+        # introduced.
+        env:
+          DASLIVE_HV_LOG: stderr
+          DASLIVE_HV_LOG_LEVEL: DEBUG
+        run: |
+          set -eux
+          ${BIN_DIR}/daslang dastest/dastest.das -- \
+            --test modules/dasImguiImplot/tests/integration \
+            --timeout 600 \
+            --isolated-mode \
+            --isolated-mode-threads 4 \
+            --headless
