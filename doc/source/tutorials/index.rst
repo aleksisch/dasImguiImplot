@@ -5,43 +5,32 @@
 ##########################
 
 Step-by-step walkthroughs of the ImPlot surface. Each tutorial pairs an annotated
-source file under ``examples/tutorial/`` with prose narrating the construction; the
-interaction tutorials are additionally backed by a headless regression under
-``tests/integration/`` that drives the same gesture.
+source file under ``examples/tutorial/`` with prose narrating the construction.
+Every example runs three ways unchanged — standalone (windowed), headless
+(``--headless``), and live (``daslang-live``) — because they are all built on the
+dasImgui harness. The interaction tutorials are additionally backed by a headless
+regression under ``tests/integration/`` that drives or asserts on the same plot
+(e.g. ``test_query_and_hover`` moves the synthetic cursor onto the plot below and
+checks the reported position).
 
-The annotated example sources are the best starting point — each runs standalone
-(windowed), headless (``--headless``), and live (``daslang-live``). They build up in
-order, and each (except the two simplest) is backed by a headless regression under
-``tests/integration/`` that drives or asserts on the same plot:
+The tutorials build up in order: a first chart, then the v2 snapshot scope, the
+item families (areas, real-time, multiple axes, grids, statistics), and finally
+the interactive surface (drag tools, colormaps, live query).
 
-* `line_plot <https://github.com/borisbat/dasImguiImplot/blob/master/examples/tutorial/line_plot.das>`_
-  — the simplest chart with the v1 thin wrapper (``with_plot`` + ``plot_line``).
-* `multi_series <https://github.com/borisbat/dasImguiImplot/blob/master/examples/tutorial/multi_series.das>`_
-  — the v2 snapshot ``plot`` scope: multi-type items (``float|double|int``), per-item
-  styling, two plots in one window.
-* `shaded_and_stairs <https://github.com/borisbat/dasImguiImplot/blob/master/examples/tutorial/shaded_and_stairs.das>`_
-  — filled areas and step plots: ``plot_shaded_between`` (a band), ``plot_shaded``
-  (fill to a baseline), ``plot_stairs``.
-* `realtime_scroll <https://github.com/borisbat/dasImguiImplot/blob/master/examples/tutorial/realtime_scroll.das>`_
-  — a rolling buffer streamed each frame against an x window pinned with
-  ``ImPlotCond.Always`` so the plot scrolls.
-* `multi_axes <https://github.com/borisbat/dasImguiImplot/blob/master/examples/tutorial/multi_axes.das>`_
-  — a second y axis (``setup_axis(ImAxis.Y2, …)``) with ``set_axis`` routing an item
-  to it; two series on wildly different scales.
-* `subplots <https://github.com/borisbat/dasImguiImplot/blob/master/examples/tutorial/subplots.das>`_
-  — a ``subplots`` grid; each cell is its own snapshot-registered ``plot``.
-* `heatmap_histogram <https://github.com/borisbat/dasImguiImplot/blob/master/examples/tutorial/heatmap_histogram.das>`_
-  — the statistical items: ``plot_heatmap`` (a 2D grid) beside ``histogram`` (a 1D
-  distribution).
-* `drag_tools <https://github.com/borisbat/dasImguiImplot/blob/master/examples/tutorial/drag_tools.das>`_
-  — interactive draggable point / threshold line / ROI rect, each with a
-  snapshot-serialized value a test can drive.
-* `colormaps_and_style <https://github.com/borisbat/dasImguiImplot/blob/master/examples/tutorial/colormaps_and_style.das>`_
-  — ``with_colormap`` so items + heatmaps auto-color from a pushed colormap, plus the
-  matching ``colormap_scale`` colorbar.
-* `query_and_hover <https://github.com/borisbat/dasImguiImplot/blob/master/examples/tutorial/query_and_hover.das>`_
-  — read ``GetPlotMousePos`` / ``IsPlotHovered`` live and annotate the cursor with
-  ``plot_text`` + a crosshair.
+.. toctree::
+   :maxdepth: 1
 
-Narrated, self-verifying recordings of each are planned; this page will grow a
-per-tutorial toctree as they land.
+   line_plot.rst
+   multi_series.rst
+   shaded_and_stairs.rst
+   realtime_scroll.rst
+   multi_axes.rst
+   subplots.rst
+   heatmap_histogram.rst
+   drag_tools.rst
+   colormaps_and_style.rst
+   query_and_hover.rst
+
+Narrated, self-verifying screen recordings of each tutorial are a planned
+follow-up; each page will grow a ``Walkthrough`` section with its recording as
+they land.
