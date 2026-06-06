@@ -29,6 +29,15 @@ Source: ``examples/tutorial/realtime_scroll.das``.
    :language: das
    :linenos:
 
+Walkthrough
+===========
+
+.. video:: realtime_scroll.mp4
+
+There is nothing to drive here — the chart streams on its own. The recording narrates
+over the live animation and asserts the window genuinely advances (``x_min`` climbs
+over the narration), so a frozen plot would fail it.
+
 The rolling buffer
 ==================
 

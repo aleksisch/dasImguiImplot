@@ -161,6 +161,12 @@ MP4. Use `--bed-db -16` (the project bar).
     --apng <implot>/doc/source/_static/tutorials/<scene>.apng --bed-db -16
 ```
 
+Most scenes land ~0.5–0.8 MB. A **full-motion** scene (e.g. `realtime_scroll`, where the whole
+plot changes every frame) defeats H.264 inter-frame compression and runs several MB — add
+`--preset veryslow` (smaller at the **same** quality; `realtime_scroll` went 2.77 → 1.54 MB this
+way). Shrink with `--preset`, never by raising `--crf` (it stays `23`) — raising crf speckles the
+dark background, which is the quality these clips can't spare.
+
 Only the resulting `.mp4` is tracked. The `.apng`, `voiceover/*`, `*.manifest.json`,
 `*.sidecar.json`, `*_music.wav`, `*.mp4.ffmpeg.txt` are intermediates and gitignored.
 
