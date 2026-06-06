@@ -38,6 +38,11 @@ def test_multi_series(t : T?) {
         t |> success(cos.rect.z > cos.rect.x && cos.rect.w > cos.rect.y,
                      "cos legend entry has a non-empty clickable rect")
 
+        // Hover telemetry + the sync gate: moving onto the entry must make it report hovered
+        // (the signal legend_toggle waits on so the press can't land before hover registers).
+        move_to(d, legend_entry_center(lsnap, waves, "cos"))
+        t |> success(wait_for_legend_hover(waves, "cos") != null, "cos legend entry reports hovered on cursor-over")
+
         // Hide cos by clicking its legend entry; verify the series goes hidden.
         legend_toggle(waves, "cos")
         var hsnap = wait_for_series_shown(waves, "cos", false)

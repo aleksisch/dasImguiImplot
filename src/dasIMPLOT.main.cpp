@@ -161,6 +161,14 @@ bool LegendEntryShown(const char* title, int index) {
     ImPlotItem* item = plot->Items.GetLegendItem(index);
     return item ? item->Show : false;
 }
+bool LegendEntryHovered(const char* title, int index) {
+    // ImPlotItem::LegendHovered is reset to false at the top of EndPlot's legend block and set
+    // during the entry render, so a post-EndPlot read via GetPlot(title) reflects this frame.
+    ImPlotPlot* plot = ImPlot::GetPlot(title);
+    if (!plot || index < 0 || index >= plot->Items.GetLegendCount()) return false;
+    ImPlotItem* item = plot->Items.GetLegendItem(index);
+    return item ? item->LegendHovered : false;
+}
 ImVec4 LegendEntryRect(const char* title, int index) {
     ImPlotPlot* plot = ImPlot::GetPlot(title);
     if (!plot || index < 0 || index >= plot->Items.GetLegendCount()) return ImVec4(0, 0, 0, 0);
@@ -259,6 +267,8 @@ void Module_dasIMPLOT::initMain () {
         SideEffects::accessExternal, "das::LegendEntryLabel")->args({"title", "index"});
     addExtern<DAS_BIND_FUN(das::LegendEntryShown)>(*this, lib, "LegendEntryShown",
         SideEffects::accessExternal, "das::LegendEntryShown")->args({"title", "index"});
+    addExtern<DAS_BIND_FUN(das::LegendEntryHovered)>(*this, lib, "LegendEntryHovered",
+        SideEffects::accessExternal, "das::LegendEntryHovered")->args({"title", "index"});
     addExtern<DAS_BIND_FUN(das::LegendEntryRect)>(*this, lib, "LegendEntryRect",
         SideEffects::accessExternal, "das::LegendEntryRect")->args({"title", "index"});
 
