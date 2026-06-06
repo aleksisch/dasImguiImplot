@@ -21,4 +21,9 @@ imgui.ini
 *.log
 screenshot.png
 _smoke_*.das
+
+# recording intermediates (only the .mp4 is tracked; see skills/recording.md)
 *.apng
+voiceover/
+*_music.wav
+*.mp4.ffmpeg.txt
