@@ -1,26 +1,14 @@
 options gen2
 
-require imgui
-require imgui_app
-require glfw/glfw_boost
-require opengl/opengl_boost
-require live/glfw_live
-require live/live_api
-require live/live_commands
-require live/live_vars
-require live/opengl_live
-require live_host
-require imgui/imgui_live
-require imgui/imgui_boost_runtime
-require imgui/imgui_boost_v2
-require imgui/imgui_widgets_builtin
+require imgui/imgui_harness
 require imgui/imgui_containers_builtin
+require imgui/imgui_widgets_builtin
 require imgui/imgui_implot_boost
 require implot
 require math
 
 // =============================================================================
-// TUTORIAL: line_plot — the simplest ImPlot chart.
+// TUTORIAL: line_plot — the simplest ImPlot chart (v1 thin wrapper).
 //
 //   with_plot(TITLE, size) { ... }   — RAII plot scope; EndPlot can't be skipped.
 //   setup_axes(x, y)                 — label the axes.
@@ -30,6 +18,7 @@ require math
 //
 // The ImPlot context is created once after the ImGui context (init) and destroyed
 // at shutdown. ImPlot shares dasImgui's ImGui context — nothing else to wire up.
+// Built on the dasImgui harness: runs standalone (windowed), headless, and live.
 //
 // STANDALONE: daslang.exe modules/dasImguiImplot/examples/tutorial/line_plot.das
 // LIVE:       daslang-live modules/dasImguiImplot/examples/tutorial/line_plot.das
@@ -41,10 +30,7 @@ var g_cos : array<double>
 
 [export]
 def init() {
-    live_create_window("dasImguiImplot — line_plot", 800, 600)
-    live_imgui_init(live_window)
-    var io & = unsafe(GetIO())
-    io.FontGlobalScale = 1.4
+    harness_init("dasImguiImplot — line_plot", 800, 600)
     g_ctx = implot::CreateContext()
     g_sin <- [for (i in range(200)); double(sin(float(i) * 0.05f))]
     g_cos <- [for (i in range(200)); double(cos(float(i) * 0.05f))]
@@ -52,14 +38,11 @@ def init() {
 
 [export]
 def update() {
-    if (!live_begin_frame()) return
-    begin_frame()
-    ImGui_ImplOpenGL3_NewFrame()
-    ImGui_ImplGlfw_NewFrame()
-    NewFrame()
+    if (!harness_begin_frame()) return
+    harness_new_frame()
 
-    SetNextWindowPos(ImVec2(20.0f, 20.0f), ImGuiCond.Always)
-    SetNextWindowSize(ImVec2(760.0f, 560.0f), ImGuiCond.Always)
+    SetNextWindowPos(float2(20.0, 20.0), ImGuiCond.Always)
+    SetNextWindowSize(float2(760.0, 560.0), ImGuiCond.Always)
     window(PLOT_WIN, (text = "line plot", closable = false,
                       flags = ImGuiWindowFlags.None)) {
         text("with_plot scopes the chart; each plot_line draws one series.")
@@ -71,15 +54,7 @@ def update() {
         }
     }
 
-    end_of_frame()
-    Render()
-    var w, h : int
-    live_get_framebuffer_size(w, h)
-    glViewport(0, 0, w, h)
-    glClearColor(0.10f, 0.10f, 0.12f, 1.0f)
-    glClear(GL_COLOR_BUFFER_BIT)
-    ImGui_ImplOpenGL3_RenderDrawData(GetDrawData())
-    live_end_frame()
+    harness_end_frame()
 }
 
 [export]
@@ -87,8 +62,7 @@ def shutdown() {
     if (g_ctx != null) {
         DestroyContext(g_ctx)
     }
-    live_imgui_shutdown()
-    live_destroy_window()
+    harness_shutdown()
 }
 
 [export]
