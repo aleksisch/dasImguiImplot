@@ -50,8 +50,10 @@ def main {
             [voice = "This plot carries two y axes. Temperature on the left, from zero to thirty. Pressure on the right, near one thousand. Two very different scales side by side on one plot."])
 
         // ---- Beat 2: drag the LEFT axis (temperature / Y1) ----
-        let b2_y1 = plot_axis_limit(snapshot(app), s, "y_max")
-        let b2_y2 = plot_axis_limit(snapshot(app), s, "y2_max")
+        // Both baselines off ONE snapshot, so the pair is from a single frame.
+        var b2 = snapshot(app)
+        let b2_y1 = plot_axis_limit(b2, s, "y_max")
+        let b2_y2 = plot_axis_limit(b2, s, "y2_max")
         let d_left = say_begin(app, "drag the left axis to pan temperature alone", PLOT,
             [voice = "Grab the left temperature axis and drag it. Only temperature pans. Pressure on the right does not move."])
         let t_left = ref_time_ticks()
@@ -59,13 +61,15 @@ def main {
         drag_axis(s, ImAxis.Y1, -110.0f)
         var dleft = wait_for_axis_limit_changed(s, "y_max", b2_y1)
         record_check(app, "temperature (Y1) panned by the left-axis drag", dleft != null)
+        // Held-steady check on the SAME frame the pan was detected (dleft), not a later snapshot.
         record_check(app, "pressure (Y2) held steady while Y1 dragged",
-                     abs(plot_axis_limit(snapshot(app), s, "y2_max") - b2_y2) < HOLD_TOL)
+                     abs(plot_axis_limit(dleft, s, "y2_max") - b2_y2) < HOLD_TOL)
         hold_remainder(d_left, t_left)
 
         // ---- Beat 3: drag the RIGHT axis (pressure / Y2) ----
-        let b3_y1 = plot_axis_limit(snapshot(app), s, "y_max")
-        let b3_y2 = plot_axis_limit(snapshot(app), s, "y2_max")
+        var b3 = snapshot(app)
+        let b3_y1 = plot_axis_limit(b3, s, "y_max")
+        let b3_y2 = plot_axis_limit(b3, s, "y2_max")
         let d_right = say_begin(app, "drag the right axis to pan pressure alone", PLOT,
             [voice = "Now the right pressure axis. Drag it, and only pressure pans. Temperature on the left stays put. Each axis moves on its own."])
         let t_right = ref_time_ticks()
@@ -74,7 +78,7 @@ def main {
         var dright = wait_for_axis_limit_changed(s, "y2_max", b3_y2)
         record_check(app, "pressure (Y2) panned by the right-axis drag", dright != null)
         record_check(app, "temperature (Y1) held steady while Y2 dragged",
-                     abs(plot_axis_limit(snapshot(app), s, "y_max") - b3_y1) < HOLD_TOL)
+                     abs(plot_axis_limit(dright, s, "y_max") - b3_y1) < HOLD_TOL)
         hold_remainder(d_right, t_right)
     }
 }
