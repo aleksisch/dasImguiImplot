@@ -41,6 +41,7 @@ struct LegendEntry {
     //! screen-space pixels `[x0,y0]`–`[x1,y1]`; entries are in legend (submission) order.
     series : string                 //! series label (the `label_id` passed to plot_line / etc.); `label` is a reserved word
     shown : bool                    //! series currently visible (false after a legend-toggle hide)
+    hovered : bool                  //! legend entry is hovered this frame (sync gate for a synthetic toggle click)
     x0 : float                      //! clickable button rect, screen px — left
     y0 : float                      //! top
     x1 : float                      //! right
@@ -84,6 +85,7 @@ def private capture_legend(var state : PlotScopeState; title : string) {
     for (i in range(n)) {
         let r = LegendEntryRect(title, i)
         state.legend[i].shown = LegendEntryShown(title, i)
+        state.legend[i].hovered = LegendEntryHovered(title, i)
         state.legend[i].x0 = r.x
         state.legend[i].y0 = r.y
         state.legend[i].x1 = r.z

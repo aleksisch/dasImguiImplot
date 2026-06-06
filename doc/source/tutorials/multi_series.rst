@@ -30,6 +30,11 @@ Source: ``examples/tutorial/multi_series.das``.
    :language: das
    :linenos:
 
+Walkthrough
+===========
+
+.. video:: multi_series.mp4
+
 The ``plot`` snapshot scope
 ===========================
 
@@ -55,3 +60,20 @@ Per-item styling
 ``next_line_style(col, weight)`` and ``next_marker_style(marker, size)`` set the
 appearance of the **next** item only (ImPlot's ``SetNext*`` model). Call them
 immediately before the item you want to style.
+
+Legend toggle
+=============
+
+Every item with a label gets a legend entry, and **clicking an entry hides or shows
+that series** — ImPlot handles this for free; the data is still submitted each frame,
+it just isn't drawn. The ``plot`` scope serializes the legend into the snapshot — one
+entry per series carrying its label, its ``shown`` flag, whether it is ``hovered``, and
+its clickable rect — so a test or recording can target an entry by name and verify the
+toggle landed. The recording above clicks the *cos* entry to hide the curve and clicks
+it again to bring it back, asserting ``shown`` flips each time.
+
+The playwright verb ``legend_toggle(session, "cos")`` drives this the way a person does:
+it moves the cursor onto the entry, waits until the entry actually reports ``hovered``
+(``wait_for_legend_hover``), and only then clicks — so the synthetic press can't land
+before the hover registers. ``wait_for_series_shown(session, "cos", false)`` is the gate
+that the click took effect.

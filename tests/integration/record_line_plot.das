@@ -87,7 +87,7 @@ def main {
         wait_for_mouse_idle(app)
         record_check_rendered(app, PLOT, true)
         say(app, "line plot: sine and cosine", PLOT,
-            [voice = "This is a line plot. Two series, sine and cosine, drawn across two hundred samples."])
+            [voice = "This is a line plot. Two series, sine and co-sine, drawn across two hundred samples."])
 
         // ---- Beat 2: pan (left drag) ----
         let before_pan = field_json(snapshot(app), PLOT, "x_max")

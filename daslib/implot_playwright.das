@@ -177,6 +177,7 @@ def public wait_for_hovered(s : PlotSession; expected : bool = true; max_frames 
 struct LegendEntryView {
     found : bool          //! a legend entry with this label was present in the snapshot
     shown : bool          //! series currently visible (false after a legend-toggle hide)
+    hovered : bool        //! legend entry hovered this frame (the sync gate for legend_toggle)
     rect  : float4        //! clickable button rect [x0,y0,x1,y1], screen px
 }
 
@@ -188,11 +189,13 @@ def public legend_entry(var snap : JsonValue?; s : PlotSession; series : string)
         for (e in leg.value as _array) {
             if ((e?["series"] ?? "") == series) {
                 return LegendEntryView(found = true, shown = e?["shown"] ?? false,
+                    hovered = e?["hovered"] ?? false,
                     rect = float4(e?["x0"] ?? 0.0f, e?["y0"] ?? 0.0f, e?["x1"] ?? 0.0f, e?["y1"] ?? 0.0f))
             }
         }
     }
-    return LegendEntryView(found = false, shown = false, rect = float4(0.0f, 0.0f, 0.0f, 0.0f))
+    return LegendEntryView(found = false, shown = false, hovered = false,
+                           rect = float4(0.0f, 0.0f, 0.0f, 0.0f))
 }
 
 def public legend_entry_center(var snap : JsonValue?; s : PlotSession; series : string) : tuple<float; float> {
@@ -210,18 +213,32 @@ def public series_shown(var snap : JsonValue?; s : PlotSession; series : string)
 
 def public legend_toggle(s : PlotSession; series : string) {
     //! Synthesize a REAL left-click on the `series` legend entry, toggling its visibility
-    //! (ImPlot hides / shows the series). Reads a fresh snapshot to locate the entry, plays a
-    //! move + press + release at its center, and blocks until the gesture settles. Silently no-ops
-    //! when the entry is absent — the caller MUST gate the effect with `wait_for_series_shown`.
+    //! (ImPlot hides / shows the series). Moves the cursor onto the entry, waits until it reports
+    //! hovered (so the press can't batch ahead of HoveredId — the windowed-vsync press-before-hover
+    //! race), then clicks in place and blocks until the gesture settles. Silently no-ops when the
+    //! entry is absent — the caller MUST gate the effect with `wait_for_series_shown`.
     var snap = snapshot(s.app)
     let v = legend_entry(snap, s, series)
     return if (!v.found)
     let center = ((v.rect.x + v.rect.z) * 0.5f, (v.rect.y + v.rect.w) * 0.5f)
+    move_to(s.app, center)
+    wait_for_legend_hover(s, series)       // sync: don't press until the entry is actually hovered
     var events : array<JsonValue?>
     click_at(events, 0, center)
     post_command(s.app, "imgui_mouse_play", JV((events = events)))
     unsafe { delete events; }
     wait_for_mouse_idle(s.app)
+}
+
+def public wait_for_legend_hover(s : PlotSession; series : string; expected : bool = true;
+                                 max_frames : int = 300) : JsonValue? {
+    //! Poll until the `series` legend entry's hover state equals `expected` — the sync gate for
+    //! `legend_toggle`: after `move_to` onto the entry, this confirms ImPlot registered the hover
+    //! before the press, so the click can't batch ahead of `HoveredId` (the windowed-vsync
+    //! press-before-hover race). Bounded; returns the matching snapshot or null on timeout.
+    return wait_until(s.app, max_frames) $(var snap) {
+        return legend_entry(snap, s, series).hovered == expected
+    }
 }
 
 def public wait_for_series_shown(s : PlotSession; series : string; expected : bool;
