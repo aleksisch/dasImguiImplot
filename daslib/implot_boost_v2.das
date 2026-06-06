@@ -71,17 +71,19 @@ struct PlotScopeState {
     @optional hovered : bool        //! IsPlotHovered() this frame
     @optional mouse_x : double      //! GetPlotMousePos().x (data coords)
     @optional mouse_y : double      //! GetPlotMousePos().y
+    @optional legend_retries : int  //! internal: frames left to re-read not-yet-resolved legend labels
     visible : bool                  //! BeginPlot returned true (plot drew this frame)
     legend : array<LegendEntry>     //! per-series legend entries (label / shown / clickable rect), legend order; empty when not visible
 }
 
+let private LEGEND_LABEL_RETRY_FRAMES = 240   // bounded window to resolve a just-registered item's label
+
 def private capture_legend(var state : PlotScopeState; title : string) {
     // Read the plot's legend into the snapshot AFTER EndPlot, by title — the rect / shown are
-    // written during EndPlot's legend render, so GetPlot(title) gives current-frame values.
-    // Labels come from ImPlot as a fresh string per call, so we (re)build them only when the
-    // entry set changes — rebuilding every frame would churn the heap. Rects / shown are scalars,
-    // refreshed every frame. (A relabel with no count change would read stale — exotic for a
-    // steady plot, and the rect / shown stay live regardless.)
+    // written during EndPlot's legend render, so GetPlot(title) gives current-frame values. Labels
+    // come from ImPlot as a fresh string per call, so we cache them (rebuild only when the entry set
+    // changes) rather than re-allocating every frame. Rects / shown are cheap scalars, refreshed
+    // every frame. (A relabel with no count change reads stale — exotic for a steady plot.)
     let n = LegendEntryCount(title)
     if (length(state.legend) != n) {
         state.legend |> clear()
@@ -89,13 +91,16 @@ def private capture_legend(var state : PlotScopeState; title : string) {
         for (i in range(n)) {
             state.legend |> emplace(LegendEntry(series = LegendEntryLabel(title, i)))
         }
+        state.legend_retries = LEGEND_LABEL_RETRY_FRAMES
     }
+    // A newly-registered item reports into the legend (count / rect / show) a frame or two before
+    // ImPlot resolves its label, so the initial cache can hold "". Re-read empty labels for a bounded
+    // window after the entry set last changed, then stop — resolves the lag without per-frame string
+    // churn, and terminates even if a label were ever legitimately empty (a hidden "##id").
+    let resolving = state.legend_retries > 0
     for (i in range(n)) {
         let r = LegendEntryRect(title, i)
-        // A newly-registered item reports into the legend (count, rect, show) a frame before ImPlot
-        // resolves its label, so the initial cache can capture "". Re-read while empty, then leave it
-        // (labels are otherwise stable — this avoids re-allocating every series string each frame).
-        if (empty(state.legend[i].series)) {
+        if (resolving && empty(state.legend[i].series)) {
             state.legend[i].series = LegendEntryLabel(title, i)
         }
         state.legend[i].shown = LegendEntryShown(title, i)
@@ -104,6 +109,9 @@ def private capture_legend(var state : PlotScopeState; title : string) {
         state.legend[i].y0 = r.y
         state.legend[i].x1 = r.z
         state.legend[i].y1 = r.w
+    }
+    if (state.legend_retries > 0) {
+        state.legend_retries--
     }
 }
 
