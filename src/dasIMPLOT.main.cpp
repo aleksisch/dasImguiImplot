@@ -178,6 +178,29 @@ ImVec4 LegendEntryRect(const char* title, int index) {
     return ImVec4(r.Min.x, r.Min.y, r.Max.x, r.Max.y);
 }
 
+// Per-axis range telemetry — read one plot axis's data-coord range and whether it's enabled, so the
+// `plot` snapshot can capture SECONDARY axes (Y2/Y3/X2/X3). GetPlotLimits only pairs the X1/Y1
+// primaries; on a multi-axis plot (e.g. pressure on Y2) the others are invisible without this.
+// MUST be called between BeginPlot/EndPlot — GetCurrentPlot() is valid only in-scope. AxisEnabled
+// gates the capture: a disabled axis's Range is meaningless (default/zero), so only active axes are
+// serialized. `axis` is an ImAxis (X1=0..Y3=5).
+bool AxisEnabled(int axis) {
+    ImPlotPlot* plot = ImPlot::GetCurrentPlot();
+    return plot && axis >= 0 && axis < ImAxis_COUNT && plot->Axes[axis].Enabled;
+}
+// Min/Max as separate scalar forwarders — ImPlotRange is a plain local_type struct with no
+// by-value cast_res binding (unlike ImVec4 -> float4), so the range is returned as two doubles.
+double AxisRangeMin(int axis) {
+    ImPlotPlot* plot = ImPlot::GetCurrentPlot();
+    if (!plot || axis < 0 || axis >= ImAxis_COUNT) return 0.0;
+    return plot->Axes[axis].Range.Min;
+}
+double AxisRangeMax(int axis) {
+    ImPlotPlot* plot = ImPlot::GetCurrentPlot();
+    if (!plot || axis < 0 || axis >= ImAxis_COUNT) return 0.0;
+    return plot->Axes[axis].Range.Max;
+}
+
 void Module_dasIMPLOT::initAotAlias () {
 }
 
@@ -271,6 +294,14 @@ void Module_dasIMPLOT::initMain () {
         SideEffects::accessExternal, "das::LegendEntryHovered")->args({"title", "index"});
     addExtern<DAS_BIND_FUN(das::LegendEntryRect)>(*this, lib, "LegendEntryRect",
         SideEffects::accessExternal, "das::LegendEntryRect")->args({"title", "index"});
+
+    // Per-axis range telemetry — secondary-axis limits for the plot snapshot (multi-axis plots).
+    addExtern<DAS_BIND_FUN(das::AxisEnabled)>(*this, lib, "AxisEnabled",
+        SideEffects::accessExternal, "das::AxisEnabled")->args({"axis"});
+    addExtern<DAS_BIND_FUN(das::AxisRangeMin)>(*this, lib, "AxisRangeMin",
+        SideEffects::accessExternal, "das::AxisRangeMin")->args({"axis"});
+    addExtern<DAS_BIND_FUN(das::AxisRangeMax)>(*this, lib, "AxisRangeMax",
+        SideEffects::accessExternal, "das::AxisRangeMax")->args({"axis"});
 
     // const ImVec2&/ImVec4& -> by value (so daslang passes float2/float4 by value);
     // mirrors dasImguiNodeEditor's initMain fixup.

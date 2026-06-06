@@ -10,6 +10,7 @@ module imgui_implot_playwright public
 // [0,200]", "move onto the plot, expect hovered") rather than JSON plumbing.
 
 require imgui/imgui_playwright public
+require implot
 require math
 require daslib/json public
 require daslib/json_boost public
@@ -70,6 +71,13 @@ def public plot_axis_limits(var snap : JsonValue?; s : PlotSession) : AxisLimits
                       y_min = p?["y_min"] ?? 0.0lf, y_max = p?["y_max"] ?? 0.0lf)
 }
 
+def public plot_axis_limit(var snap : JsonValue?; s : PlotSession; field : string) : double {
+    //! One axis-limit field of the plot payload by name (DATA coords) — the reader for SECONDARY
+    //! axes the typed `plot_axis_limits` (X1/Y1 only) does not cover: e.g. "y2_max" / "x2_min".
+    //! 0 if absent (axis not enabled, or the `@optional`-zero trap on an exactly-zero limit).
+    return plot_payload(snap, s)?[field] ?? 0.0lf
+}
+
 def public plot_mouse_pos(var snap : JsonValue?; s : PlotSession) : tuple<double; double> {
     //! GetPlotMousePos() in DATA coords (only meaningful while plot_hovered is true).
     let p = plot_payload(snap, s)
@@ -87,6 +95,62 @@ def public plot_center(var snap : JsonValue?; s : PlotSession) : tuple<float; fl
     //! (the tuple form `move_to` expects).
     let bb = plot_bbox(snap, s)
     return ((bb.x + bb.z) * 0.5f, (bb.y + bb.w) * 0.5f)
+}
+
+// ===== axis drag (pan one axis) =====
+
+let private AXIS_GUTTER_PX = 18.0f   // into the tick-label strip just outside the data area
+let private AXIS_DRAG_STEPS = 6
+
+def private continuous_axis_drag(app : ImguiApp; from_pt : tuple<float; float>; to_pt : tuple<float; float>) {
+    // ImPlot integrates io.MouseDelta per frame, so a pan needs a CONTINUOUS multi-waypoint drag (a
+    // single from->to jump does not move the axis). Walk the cursor across waypoints, button held.
+    let dur = 120
+    let endt = 120 + AXIS_DRAG_STEPS * dur
+    var ev <- [
+        JV((t_ms = 0,   kind = "move",   x = from_pt._0, y = from_pt._1)),
+        JV((t_ms = 100, kind = "move",   x = from_pt._0, y = from_pt._1)),
+        JV((t_ms = 120, kind = "button", button = 0, action = "press"))]
+    ev |> reserve(length(ev) + AXIS_DRAG_STEPS + 2)
+    for (i in range(1, AXIS_DRAG_STEPS + 1)) {
+        let f = float(i) / float(AXIS_DRAG_STEPS)
+        ev |> push(JV((t_ms = 120 + i * dur, kind = "move",
+                       x = from_pt._0 + (to_pt._0 - from_pt._0) * f,
+                       y = from_pt._1 + (to_pt._1 - from_pt._1) * f)))
+    }
+    ev |> push(JV((t_ms = endt + 80,  kind = "button", button = 0, action = "release")))
+    ev |> push(JV((t_ms = endt + 180, kind = "move", x = to_pt._0, y = to_pt._1)))
+    post_command(app, "imgui_mouse_play", JV((events = ev)))
+    wait_for_mouse_idle(app)
+    unsafe { delete ev; }
+}
+
+def public drag_axis(s : PlotSession; axis : ImAxis; delta_px : float) {
+    //! Continuous drag along ONE axis's gutter (the tick-label strip just outside the data area),
+    //! panning ONLY that axis — the multi-axis "rescale just this one" gesture, distinct from a
+    //! plot-body pan (which moves every axis at once). Locates the gutter from the plot geometry
+    //! (pos / plot_size) in the snapshot: Y axes drag vertically by `delta_px`, X axes horizontally.
+    //! Supports the X1 / X2 / Y1 / Y2 gutters (primary + first auxiliary). Silent no-op when the plot
+    //! isn't visible or `axis` is unsupported — gate the effect with `wait_for_axis_limit_changed` /
+    //! `record_check_changed` on the axis's range field (e.g. "y2_max").
+    var snap = snapshot(s.app)
+    let p = plot_payload(snap, s)
+    return if (!(p?["visible"] ?? false))
+    let px = p?["pos"]?["x"] ?? 0.0f
+    let py = p?["pos"]?["y"] ?? 0.0f
+    let pw = p?["plot_size"]?["x"] ?? 0.0f
+    let ph = p?["plot_size"]?["y"] ?? 0.0f
+    let cx = px + pw * 0.5f
+    let cy = py + ph * 0.5f
+    if (axis == ImAxis.Y1) {
+        continuous_axis_drag(s.app, (px - AXIS_GUTTER_PX, cy), (px - AXIS_GUTTER_PX, cy + delta_px))
+    } elif (axis == ImAxis.Y2) {
+        continuous_axis_drag(s.app, (px + pw + AXIS_GUTTER_PX, cy), (px + pw + AXIS_GUTTER_PX, cy + delta_px))
+    } elif (axis == ImAxis.X1) {
+        continuous_axis_drag(s.app, (cx, py + ph + AXIS_GUTTER_PX), (cx + delta_px, py + ph + AXIS_GUTTER_PX))
+    } elif (axis == ImAxis.X2) {
+        continuous_axis_drag(s.app, (cx, py - AXIS_GUTTER_PX), (cx + delta_px, py - AXIS_GUTTER_PX))
+    }
 }
 
 // ===== drag-tool handles =====
@@ -156,6 +220,15 @@ def public wait_for_axis_limits(s : PlotSession; x_min : double; x_max : double;
         let l = plot_axis_limits(snap, s)
         return (abs(l.x_min - x_min) < tol && abs(l.x_max - x_max) < tol &&
                 abs(l.y_min - y_min) < tol && abs(l.y_max - y_max) < tol)
+    }
+}
+
+def public wait_for_axis_limit_changed(s : PlotSession; field : string; before : double;
+                                       tol : double = 1.0e-6lf; max_frames : int = 300) : JsonValue? {
+    //! Poll until the plot's `field` axis-limit (e.g. "y2_max") moves off `before` by more than
+    //! `tol` — the gate for a `drag_axis` actually panning that axis. Returns the snapshot or null.
+    return wait_until(s.app, max_frames) $(var snap) {
+        return abs(plot_axis_limit(snap, s, field) - before) > tol
     }
 }
 
