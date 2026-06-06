@@ -17,8 +17,8 @@ require imgui/imgui_boost_v2 public            // [container] / [widget] annotat
 //   - OR-typed item wrappers (float | double | int) over the type-overloaded
 //     native forwarders, so call sites stay one line regardless of element type.
 //   - SetNext* styling and Setup* axis/legend wrappers with auto-sentinel defaults.
-// Drag tools and the templated item families (bar-groups, pie, heatmap, histogram,
-// digital, error-bars) land in a follow-up pass alongside their C++ forwarders.
+//   - Drag tools, statistical / 2D items (heatmap, histogram, error-bars, digital),
+//     and the categorical / labelled families (bar-groups, pie) over their forwarders.
 
 // Container finalize that reflects the state struct into the snapshot payload
 // (addr + TypeInfo → sprint_json_at at snapshot time). Mirrors dasImgui's
@@ -343,6 +343,29 @@ def public histogram2d(label_id : string; xs : array<auto(T)>; ys : array<T>;
     //! `PlotHistogram2D(...)` — bivariate histogram heatmap; returns the largest bin count.
     //! An all-zero range auto-ranges to the data.
     return PlotHistogram2D(label_id, xs, ys, x_bins, y_bins, x_min, x_max, y_min, y_max, flags)
+}
+
+// ===== Categorical / labelled items =====
+
+def public plot_bar_groups(label_ids : array<string>;
+                           values : array<float> | array<double> | array<int>;
+                           item_count : int; group_count : int;
+                           group_size : double = 0.67lf; shift : double = 0.0lf; flags : int = 0) {
+    //! `PlotBarGroups(...)` — `item_count` series clustered into `group_count` groups.
+    //! `values` is a flat `item_count*group_count` row-major matrix (`values[item*group_count+group]`)
+    //! and `label_ids` names one series per row. The Stacked flag stacks within a group, Horizontal
+    //! flips the bars onto the y-axis.
+    PlotBarGroups(label_ids, values, item_count, group_count, group_size, shift, flags)
+}
+
+def public plot_pie_chart(label_ids : array<string>;
+                          values : array<float> | array<double> | array<int>;
+                          x : double; y : double; radius : double;
+                          label_fmt : string = "%.1f"; angle0 : double = 90.0lf; flags : int = 0) {
+    //! `PlotPieChart(...)` — one slice per (`label_ids`, `values`) pair centered at data-coords
+    //! `(x, y)` with `radius` in data units. `label_fmt=""` draws no slice labels; the Normalize
+    //! flag forces a full circle even when the values sum to less than one.
+    PlotPieChart(label_ids, values, x, y, radius, label_fmt, angle0, flags)
 }
 
 // ===== Drag tools =====
