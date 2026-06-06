@@ -28,6 +28,7 @@ def document_module_imgui_implot_boost_v2() {
         group_by_regex("Next-item styling",   mod, %regex~^(next_line_style|next_fill_style|next_marker_style|next_axes_limits|next_axes_to_fit)$%%),
         group_by_regex("Plot items",          mod, %regex~^(plot_line|plot_scatter|plot_stairs|plot_bars|plot_stems|plot_shaded|plot_shaded_between|plot_inf_lines|plot_text|plot_dummy|plot_error_bars|plot_digital|plot_heatmap|histogram|histogram2d)$%%),
         group_by_regex("Drag tools",          mod, %regex~^(drag_point|drag_line_x|drag_line_y|drag_rect)$%%),
+        group_by_regex("Colormaps",           mod, %regex~^(push_colormap|pop_colormap|with_colormap|colormap_scale|sample_colormap)$%%),
         group_by_regex("Coordinate conversion", mod, %regex~^(plot_to_pixels|pixels_to_plot)$%%),
         hide_group(group_by_regex("Finalizers", mod, %regex~^(finalize_.*|.*_finalize)$%%)),
         hide_group(group_by_regex("Internal",   mod, %regex~^(_|priv_).*%%))

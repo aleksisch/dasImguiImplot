@@ -92,6 +92,26 @@ Drag-tool behavior bits — ``NoCursors`` (don't change the mouse cursor on hove
 not draggable), ``Delayed`` (apply the new value one frame late). Passed to
 ``drag_point`` / ``drag_line_x`` / ``drag_line_y`` / ``drag_rect``.
 
+.. _enum-implot-ImPlotColormap:
+
+``implot::ImPlotColormap``
+==========================
+
+A built-in colormap — ``Deep`` (default), ``Dark``, ``Pastel``, ``Paired``,
+``Viridis``, ``Plasma``, ``Hot``, ``Cool``, ``Pink``, ``Jet``, ``Twilight``,
+``RdBu``, ``BrBG``, ``PiYG``, ``Spectral``, ``Greys``. Passed to ``push_colormap`` /
+``with_colormap`` / ``colormap_scale`` / ``sample_colormap`` to pick the map items
+sample their colors from.
+
+.. _enum-implot-ImPlotColormapScaleFlags:
+
+``implot::ImPlotColormapScaleFlags``
+====================================
+
+Colorbar-scale bits for ``colormap_scale`` — ``NoLabel`` (hide the tick labels),
+``Opposite`` (ticks on the other side), ``Invert`` (flip the gradient direction);
+``None`` in the common case.
+
 .. _struct-imgui_playwright-ImguiApp:
 
 ``imgui_playwright::ImguiApp``

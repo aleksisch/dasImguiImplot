@@ -446,3 +446,45 @@ def public pixels_to_plot(px : float2;
     //! `PixelsToPlot(px, ...)` — screen pixels → data coords (valid in-scope).
     return PixelsToPlot(px, x_axis, y_axis)
 }
+
+// ===== Colormaps =====
+//
+// A colormap maps a normalized t in [0,1] to a color. Push one (with_colormap /
+// push_colormap) and the auto-colored items + heatmaps inside it sample their colors
+// from it; colormap_scale draws the matching colorbar legend. `cmap` is the
+// ImPlotColormap enum (Deep / Viridis / Plasma / Jet / Greys / …) — passed straight
+// through (the binding exposes ImPlot's typedef-int colormap handle AS the enum).
+
+def public push_colormap(cmap : ImPlotColormap) {
+    //! `PushColormap(cmap)` — make `cmap` the active colormap for subsequent items.
+    //! Balance with `pop_colormap` (or use `with_colormap` for the RAII scope).
+    PushColormap(cmap)
+}
+
+def public pop_colormap(count : int = 1) {
+    //! `PopColormap(count)` — restore the colormap(s) pushed by `push_colormap`.
+    PopColormap(count)
+}
+
+def public with_colormap(cmap : ImPlotColormap; blk : block) {
+    //! `PushColormap(cmap)` / `PopColormap()` around `blk` — RAII colormap scope so the
+    //! pop can't be skipped. Auto-colored items / heatmaps in the body sample from `cmap`.
+    PushColormap(cmap)
+    invoke(blk)
+    PopColormap(1)
+}
+
+def public colormap_scale(label_id : string; scale_min : double; scale_max : double;
+                          cmap : ImPlotColormap; size : float2 = float2(0.0f, 0.0f);
+                          fmt : string = "%g";
+                          flags : ImPlotColormapScaleFlags = ImPlotColormapScaleFlags.None) {
+    //! `ColormapScale(...)` — draw a vertical colorbar legend spanning [scale_min, scale_max]
+    //! for `cmap` (pass the same colormap you pushed). Pair with a heatmap to label its
+    //! value→color mapping.
+    ColormapScale(label_id, scale_min, scale_max, size, fmt, flags, cmap)
+}
+
+def public sample_colormap(t : float; cmap : ImPlotColormap) : float4 {
+    //! `SampleColormap(t, cmap)` — the color at normalized position `t` in [0,1] of `cmap`.
+    return SampleColormap(t, cmap)
+}
