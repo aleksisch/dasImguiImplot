@@ -166,3 +166,69 @@ def public wait_for_hovered(s : PlotSession; expected : bool = true; max_frames 
         return plot_hovered(snap, s) == expected
     }
 }
+
+// ===== legend entries =====
+//
+// The v2 `plot` scope serializes its per-series legend (label / shown / clickable rect) into
+// `payload.legend`. These helpers find an entry by series label so a test reads as intent
+// ("toggle the cos series, expect it hidden") and a recording drives a REAL synthetic click at
+// the exact rect ImPlot hit-tests — clicking a legend entry hides / shows that series.
+
+struct LegendEntryView {
+    found : bool          //! a legend entry with this label was present in the snapshot
+    shown : bool          //! series currently visible (false after a legend-toggle hide)
+    rect  : float4        //! clickable button rect [x0,y0,x1,y1], screen px
+}
+
+def public legend_entry(var snap : JsonValue?; s : PlotSession; series : string) : LegendEntryView {
+    //! Find the `series`-labelled legend entry in the plot snapshot. `found` is false (rest zero)
+    //! when the plot isn't visible or has no such series. (`series`, not `label` — reserved word.)
+    let leg = plot_payload(snap, s)?["legend"]
+    if (leg != null && leg.value is _array) {
+        for (e in leg.value as _array) {
+            if ((e?["series"] ?? "") == series) {
+                return LegendEntryView(found = true, shown = e?["shown"] ?? false,
+                    rect = float4(e?["x0"] ?? 0.0f, e?["y0"] ?? 0.0f, e?["x1"] ?? 0.0f, e?["y1"] ?? 0.0f))
+            }
+        }
+    }
+    return LegendEntryView(found = false, shown = false, rect = float4(0.0f, 0.0f, 0.0f, 0.0f))
+}
+
+def public legend_entry_center(var snap : JsonValue?; s : PlotSession; series : string) : tuple<float; float> {
+    //! Screen-space center of the `series` legend entry — the synthetic click / move target.
+    //! (0,0) when absent; gate on `legend_entry().found` / `wait_for_series_shown` first.
+    let r = legend_entry(snap, s, series).rect
+    return ((r.x + r.z) * 0.5f, (r.y + r.w) * 0.5f)
+}
+
+def public series_shown(var snap : JsonValue?; s : PlotSession; series : string) : bool {
+    //! True iff the `series` is currently visible (its legend entry is not toggled off).
+    //! False when the series is hidden OR absent — pair with `legend_entry().found` to distinguish.
+    return legend_entry(snap, s, series).shown
+}
+
+def public legend_toggle(s : PlotSession; series : string) {
+    //! Synthesize a REAL left-click on the `series` legend entry, toggling its visibility
+    //! (ImPlot hides / shows the series). Reads a fresh snapshot to locate the entry, plays a
+    //! move + press + release at its center, and blocks until the gesture settles. Silently no-ops
+    //! when the entry is absent — the caller MUST gate the effect with `wait_for_series_shown`.
+    var snap = snapshot(s.app)
+    let v = legend_entry(snap, s, series)
+    return if (!v.found)
+    let center = ((v.rect.x + v.rect.z) * 0.5f, (v.rect.y + v.rect.w) * 0.5f)
+    var events : array<JsonValue?>
+    click_at(events, 0, center)
+    post_command(s.app, "imgui_mouse_play", JV((events = events)))
+    unsafe { delete events; }
+    wait_for_mouse_idle(s.app)
+}
+
+def public wait_for_series_shown(s : PlotSession; series : string; expected : bool;
+                                 max_frames : int = 300) : JsonValue? {
+    //! Poll until the `series`' visibility equals `expected` — the gate for a `legend_toggle`
+    //! actually landing. Returns the matching snapshot or null on timeout.
+    return wait_until(s.app, max_frames) $(var snap) {
+        return series_shown(snap, s, series) == expected
+    }
+}

@@ -8,6 +8,14 @@
 #include "need_dasIMPLOT.h"
 #include "aot_dasIMPLOT.h"
 
+// implot_internal.h for the legend telemetry forwarders below (GetCurrentPlot / ImPlotItemGroup).
+// IMGUI_DEFINE_MATH_OPERATORS so the ImVec2 math in imgui_internal.h's inline helpers compiles,
+// mirroring implot.cpp's own include preamble.
+#ifndef IMGUI_DEFINE_MATH_OPERATORS
+#define IMGUI_DEFINE_MATH_OPERATORS
+#endif
+#include <implot_internal.h>
+
 namespace das {
 
 // ImPlot's Plot* functions are C++ templates; libclang skips them in the binder, so we
@@ -126,6 +134,38 @@ FWD_BARGROUPS(f, float) FWD_BARGROUPS(d, double) FWD_BARGROUPS(i, int32_t)
                              x, y, radius, implot_nz(label_fmt), angle0, flags); }
 FWD_PIECHART(f, float) FWD_PIECHART(d, double) FWD_PIECHART(i, int32_t)
 
+// ===== Legend telemetry (read inside a BeginPlot/EndPlot scope) =====
+// ImPlot keeps per-series visibility (ImPlotItem::Show) and the per-entry legend button rect
+// internal. The v2 `plot` scope reads these between item submission and EndPlot to serialize a
+// per-series {label, shown, rect} list into its snapshot, so a test / recording can target a
+// synthetic legend-toggle click and verify the series hid / showed. `index` is the legend order
+// (== submission order, unless the Sort flag). All return empty / zero when no plot is current
+// or the index is out of range. The rect is screen-space pixels (the value patched into
+// LegendHoverRect every frame — see implot.cpp).
+int LegendEntryCount() {
+    ImPlotPlot* plot = ImPlot::GetCurrentPlot();
+    return plot ? plot->Items.GetLegendCount() : 0;
+}
+const char* LegendEntryLabel(int index) {
+    ImPlotPlot* plot = ImPlot::GetCurrentPlot();
+    if (!plot || index < 0 || index >= plot->Items.GetLegendCount()) return "";
+    return plot->Items.GetLegendLabel(index);
+}
+bool LegendEntryShown(int index) {
+    ImPlotPlot* plot = ImPlot::GetCurrentPlot();
+    if (!plot || index < 0 || index >= plot->Items.GetLegendCount()) return false;
+    ImPlotItem* item = plot->Items.GetLegendItem(index);
+    return item ? item->Show : false;
+}
+ImVec4 LegendEntryRect(int index) {
+    ImPlotPlot* plot = ImPlot::GetCurrentPlot();
+    if (!plot || index < 0 || index >= plot->Items.GetLegendCount()) return ImVec4(0, 0, 0, 0);
+    ImPlotItem* item = plot->Items.GetLegendItem(index);
+    if (!item) return ImVec4(0, 0, 0, 0);
+    const ImRect& r = item->LegendHoverRect;
+    return ImVec4(r.Min.x, r.Min.y, r.Max.x, r.Max.y);
+}
+
 void Module_dasIMPLOT::initAotAlias () {
 }
 
@@ -207,6 +247,16 @@ void Module_dasIMPLOT::initMain () {
     REG_HISTOGRAM2D(f) REG_HISTOGRAM2D(d) REG_HISTOGRAM2D(i)
     REG_BARGROUPS(f) REG_BARGROUPS(d) REG_BARGROUPS(i)
     REG_PIECHART(f) REG_PIECHART(d) REG_PIECHART(i)
+
+    // Legend telemetry — pure reads of the current plot's internal item/legend state.
+    addExtern<DAS_BIND_FUN(das::LegendEntryCount)>(*this, lib, "LegendEntryCount",
+        SideEffects::accessExternal, "das::LegendEntryCount");
+    addExtern<DAS_BIND_FUN(das::LegendEntryLabel)>(*this, lib, "LegendEntryLabel",
+        SideEffects::accessExternal, "das::LegendEntryLabel")->args({"index"});
+    addExtern<DAS_BIND_FUN(das::LegendEntryShown)>(*this, lib, "LegendEntryShown",
+        SideEffects::accessExternal, "das::LegendEntryShown")->args({"index"});
+    addExtern<DAS_BIND_FUN(das::LegendEntryRect)>(*this, lib, "LegendEntryRect",
+        SideEffects::accessExternal, "das::LegendEntryRect")->args({"index"});
 
     // const ImVec2&/ImVec4& -> by value (so daslang passes float2/float4 by value);
     // mirrors dasImguiNodeEditor's initMain fixup.
