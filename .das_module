@@ -7,5 +7,6 @@ def initialize(project_path : string) {
         register_dynamic_module("{project_path}/dasModuleImplot.shared_module", "Module_dasIMPLOT")
     }
     register_native_path("imgui", "imgui_implot_boost", "{project_path}/daslib/implot_boost.das")
-    // v2/app/playwright/theme wrapper modules are registered here as they are added.
+    register_native_path("imgui", "imgui_implot_boost_v2", "{project_path}/daslib/implot_boost_v2.das")
+    // app/playwright/theme wrapper modules are registered here as they are added.
 }

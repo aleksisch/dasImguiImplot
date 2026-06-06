@@ -1,0 +1,295 @@
+options gen2
+options indenting = 4
+options no_unused_block_arguments = false
+options no_unused_function_arguments = false
+
+module imgui_implot_boost_v2 shared
+
+require imgui public
+require implot public
+require imgui/imgui_boost_runtime public      // WidgetEntry / stateless_finalize / [container] machinery
+require imgui/imgui_boost_v2 public            // [container] / [widget] annotations
+
+// v2 "proper" DSL over the implot native binding. Adds over v1 (imgui_implot_boost):
+//   - `plot` / `subplots` [container] scopes that serialize the plot's per-frame
+//     state (geometry, axis limits, hovered, mouse-plot-pos) into the dasImgui
+//     snapshot rail — the hook the playwright/test layer asserts on.
+//   - OR-typed item wrappers (float | double | int) over the type-overloaded
+//     native forwarders, so call sites stay one line regardless of element type.
+//   - SetNext* styling and Setup* axis/legend wrappers with auto-sentinel defaults.
+// Drag tools and the templated item families (bar-groups, pie, heatmap, histogram,
+// digital, error-bars) land in a follow-up pass alongside their C++ forwarders.
+
+// Container finalize that reflects the state struct into the snapshot payload
+// (addr + TypeInfo → sprint_json_at at snapshot time). Mirrors dasImgui's
+// stateless_finalize without dragging in the whole imgui_containers_builtin module.
+def private finalize_state(widget_ident : string; kind : string; var state : auto(ST); box : float4) {
+    var entry : WidgetEntry
+    capture_item_bbox(entry, box)
+    unsafe {
+        container_finalize(widget_ident, kind, entry, addr(state),
+                           reinterpret<TypeInfo const?>(typeinfo rtti_typeinfo(type<ST>)))
+    }
+}
+
+// ===== Plot scope snapshot =====
+
+struct PlotScopeState {
+    //! Per-frame snapshot of a `plot` scope, pasted into the widget's snapshot
+    //! payload by `stateless_finalize`. Geometry is screen-space pixels;
+    //! limits / mouse are in plot DATA coordinates. Everything but `visible` is
+    //! captured between BeginPlot/EndPlot — the only window where ImPlot's query
+    //! functions are valid — so the fields are absent on a clipped/collapsed plot.
+    @optional pos : float2          //! plot area top-left, screen px
+    @optional plot_size : float2    //! plot area size, screen px
+    @optional x_min : double        //! X axis lower limit (data coords)
+    @optional x_max : double        //! X axis upper limit
+    @optional y_min : double        //! Y axis lower limit
+    @optional y_max : double        //! Y axis upper limit
+    @optional hovered : bool        //! IsPlotHovered() this frame
+    @optional mouse_x : double      //! GetPlotMousePos().x (data coords)
+    @optional mouse_y : double      //! GetPlotMousePos().y
+    visible : bool                  //! BeginPlot returned true (plot drew this frame)
+}
+
+[container]
+def plot(var state : PlotScopeState; title : string; size : float2; flags : ImPlotFlags; blk : block) {
+    //! `BeginPlot(title, size, flags)` / `EndPlot()` — only-on-true pairing, so the
+    //! body and the state capture run iff the plot is visible. Registers as kind
+    //! "implot_plot"; the snapshot payload mirrors PlotState (geometry + axis limits
+    //! + hovered + mouse-plot-pos), captured in-scope where ImPlot's queries are valid.
+    //! Items submitted in the body nest under this plot's snapshot path.
+    let im_open = BeginPlot(title, size, flags)
+    state.visible = im_open
+    var box = float4(0.0f, 0.0f, 0.0f, 0.0f)
+    if (im_open) {
+        invoke(blk)
+        let ppos = GetPlotPos()
+        let psz = GetPlotSize()
+        let lim = GetPlotLimits(ImAxis.X1, ImAxis.Y1)
+        state.pos = ppos
+        state.plot_size = psz
+        state.x_min = lim.X.Min
+        state.x_max = lim.X.Max
+        state.y_min = lim.Y.Min
+        state.y_max = lim.Y.Max
+        state.hovered = IsPlotHovered()
+        // mouse-plot-pos is a projection of io.MousePos — meaningless when the
+        // cursor isn't on screen (headless / off-window), where it reads as the
+        // ±FLT_MAX sentinel. Only capture it when the mouse position is valid.
+        if (IsMousePosValid(null)) {
+            let mp = GetPlotMousePos(ImAxis.X1, ImAxis.Y1)
+            state.mouse_x = mp.x
+            state.mouse_y = mp.y
+        }
+        box = float4(ppos.x, ppos.y, ppos.x + psz.x, ppos.y + psz.y)
+        EndPlot()
+    }
+    finalize_state(widget_ident, "implot_plot", state, box)
+}
+
+struct SubplotScopeState {
+    //! Per-frame snapshot of a `subplots` grid. ImPlot owns per-cell geometry
+    //! (each cell is its own BeginPlot inside the body), so the grid itself only
+    //! reports its layout + visibility; cells register as nested `plot` entries.
+    rows : int                      //! row count passed to BeginSubplots
+    cols : int                      //! column count
+    visible : bool                  //! BeginSubplots returned true
+}
+
+[container]
+def subplots(var state : SubplotScopeState; title : string; rows : int; cols : int;
+             size : float2; flags : ImPlotSubplotFlags; blk : block) {
+    //! `BeginSubplots(title, rows, cols, size, flags)` / `EndSubplots()` —
+    //! only-on-true pairing. The body issues `rows*cols` `plot` scopes (one per
+    //! cell). Registers as kind "implot_subplots"; payload mirrors SubplotState.
+    state.rows = rows
+    state.cols = cols
+    let im_open = BeginSubplots(title, rows, cols, size, flags, null, null)
+    state.visible = im_open
+    if (im_open) {
+        invoke(blk)
+        EndSubplots()
+    }
+    finalize_state(widget_ident, "implot_subplots", state, float4(0.0f, 0.0f, 0.0f, 0.0f))
+}
+
+// ===== Axis / legend setup =====
+
+def public setup_axes(x_label : string; y_label : string;
+                      x_flags : ImPlotAxisFlags = ImPlotAxisFlags.None;
+                      y_flags : ImPlotAxisFlags = ImPlotAxisFlags.None) {
+    //! `SetupAxes(x_label, y_label, x_flags, y_flags)` — label and configure both
+    //! axes in one call. Must run before any item is plotted in the scope.
+    SetupAxes(x_label, y_label, x_flags, y_flags)
+}
+
+def public setup_axis(axis : ImAxis; axis_label : string;
+                      flags : ImPlotAxisFlags = ImPlotAxisFlags.None) {
+    //! `SetupAxis(axis, label, flags)` — configure one axis (e.g. enable a second
+    //! Y axis with `setup_axis(ImAxis.Y2, "rhs", ImPlotAxisFlags.AuxDefault)`).
+    SetupAxis(axis, axis_label, flags)
+}
+
+def public setup_axes_limits(x_min : double; x_max : double; y_min : double; y_max : double;
+                             cond : ImPlotCond = ImPlotCond.Once) {
+    //! `SetupAxesLimits(...)` — fix the initial visible range of both axes.
+    //! `cond` defaults to Once so the user can still pan/zoom afterwards.
+    SetupAxesLimits(x_min, x_max, y_min, y_max, cond)
+}
+
+def public setup_axis_limits(axis : ImAxis; v_min : double; v_max : double;
+                             cond : ImPlotCond = ImPlotCond.Once) {
+    //! `SetupAxisLimits(axis, v_min, v_max, cond)` — fix one axis's range.
+    SetupAxisLimits(axis, v_min, v_max, cond)
+}
+
+def public setup_legend(location : ImPlotLocation;
+                        flags : ImPlotLegendFlags = ImPlotLegendFlags.None) {
+    //! `SetupLegend(location, flags)` — place / configure the plot legend.
+    SetupLegend(location, flags)
+}
+
+// ===== Next-item styling (SetNext*) =====
+//
+// Auto-sentinels mirror ImPlot's defaults: weight/size/alpha = -1 ("auto"),
+// color = float4(0,0,0,-1) (IMPLOT_AUTO_COL). Pass an explicit value to override.
+
+def public next_line_style(col : float4; weight : float = -1.0f) {
+    //! `SetNextLineStyle(col, weight)` — stroke color/width of the NEXT line item.
+    SetNextLineStyle(col, weight)
+}
+
+def public next_fill_style(col : float4; alpha_mod : float = -1.0f) {
+    //! `SetNextFillStyle(col, alpha_mod)` — fill color/alpha of the NEXT shaded /
+    //! bar / pie item.
+    SetNextFillStyle(col, alpha_mod)
+}
+
+def public next_marker_style(marker : ImPlotMarker; size : float = -1.0f;
+                             fill : float4 = float4(0.0f, 0.0f, 0.0f, -1.0f);
+                             weight : float = -1.0f;
+                             outline : float4 = float4(0.0f, 0.0f, 0.0f, -1.0f)) {
+    //! `SetNextMarkerStyle(marker, size, fill, weight, outline)` — marker glyph /
+    //! size / colors of the NEXT scatter / line item.
+    SetNextMarkerStyle(marker, size, fill, weight, outline)
+}
+
+def public next_axes_limits(x_min : double; x_max : double; y_min : double; y_max : double;
+                            cond : ImPlotCond = ImPlotCond.Once) {
+    //! `SetNextAxesLimits(...)` — set the next plot's initial axis range BEFORE
+    //! its BeginPlot (the SetupAxesLimits equivalent for a `plot` you don't want
+    //! to put a `setup_axes_limits` call inside).
+    SetNextAxesLimits(x_min, x_max, y_min, y_max, cond)
+}
+
+def public next_axes_to_fit() {
+    //! `SetNextAxesToFit()` — fit the next plot's axes to its data on this frame.
+    SetNextAxesToFit()
+}
+
+// ===== Plot items (float | double | int) =====
+//
+// Single OR-typed wrappers over the type-overloaded native forwarders. The paired
+// x/y forms tie both arrays to one element type T (mixed-type x/y has no native
+// overload). `flags` is the per-item ImPlot*Flags as a bare int (all are typedef int).
+
+def public plot_line(label_id : string; values : array<float> | array<double> | array<int>;
+                     xscale : double = 1.0lf; xstart : double = 0.0lf; flags : int = 0) {
+    //! `PlotLine(label_id, values, xscale, xstart, flags)` — a y-series against an
+    //! implicit x = xstart + i*xscale.
+    PlotLine(label_id, values, xscale, xstart, flags)
+}
+def public plot_line(label_id : string; xs : array<auto(T)>; ys : array<T>; flags : int = 0) {
+    //! `PlotLine(label_id, xs, ys, flags)` — an explicit x/y series.
+    PlotLine(label_id, xs, ys, flags)
+}
+
+def public plot_scatter(label_id : string; values : array<float> | array<double> | array<int>;
+                        xscale : double = 1.0lf; xstart : double = 0.0lf; flags : int = 0) {
+    //! `PlotScatter(...)` — markers only, no connecting line.
+    PlotScatter(label_id, values, xscale, xstart, flags)
+}
+def public plot_scatter(label_id : string; xs : array<auto(T)>; ys : array<T>; flags : int = 0) {
+    PlotScatter(label_id, xs, ys, flags)
+}
+
+def public plot_stairs(label_id : string; values : array<float> | array<double> | array<int>;
+                       xscale : double = 1.0lf; xstart : double = 0.0lf; flags : int = 0) {
+    //! `PlotStairs(...)` — a step plot.
+    PlotStairs(label_id, values, xscale, xstart, flags)
+}
+def public plot_stairs(label_id : string; xs : array<auto(T)>; ys : array<T>; flags : int = 0) {
+    PlotStairs(label_id, xs, ys, flags)
+}
+
+def public plot_bars(label_id : string; values : array<float> | array<double> | array<int>;
+                     bar_size : double = 0.67lf; shift : double = 0.0lf; flags : int = 0) {
+    //! `PlotBars(...)` — vertical bars at x = i + shift (Horizontal flag flips it).
+    PlotBars(label_id, values, bar_size, shift, flags)
+}
+def public plot_bars(label_id : string; xs : array<auto(T)>; ys : array<T>;
+                     bar_size : double; flags : int = 0) {
+    PlotBars(label_id, xs, ys, bar_size, flags)
+}
+
+def public plot_stems(label_id : string; values : array<float> | array<double> | array<int>;
+                      ref : double = 0.0lf; scale : double = 1.0lf; start : double = 0.0lf;
+                      flags : int = 0) {
+    //! `PlotStems(...)` — stems from a baseline `ref` to each y value.
+    PlotStems(label_id, values, ref, scale, start, flags)
+}
+def public plot_stems(label_id : string; xs : array<auto(T)>; ys : array<T>;
+                      ref : double = 0.0lf; flags : int = 0) {
+    PlotStems(label_id, xs, ys, ref, flags)
+}
+
+def public plot_shaded(label_id : string; values : array<float> | array<double> | array<int>;
+                       yref : double = 0.0lf; xscale : double = 1.0lf; xstart : double = 0.0lf;
+                       flags : int = 0) {
+    //! `PlotShaded(...)` — area between the series and a horizontal baseline `yref`.
+    PlotShaded(label_id, values, yref, xscale, xstart, flags)
+}
+def public plot_shaded(label_id : string; xs : array<auto(T)>; ys : array<T>;
+                       yref : double = 0.0lf; flags : int = 0) {
+    PlotShaded(label_id, xs, ys, yref, flags)
+}
+def public plot_shaded_between(label_id : string; xs : array<auto(T)>;
+                               ys1 : array<T>; ys2 : array<T>; flags : int = 0) {
+    //! `PlotShaded(label_id, xs, ys1, ys2, flags)` — area between two y series.
+    PlotShaded(label_id, xs, ys1, ys2, flags)
+}
+
+def public plot_inf_lines(label_id : string;
+                          values : array<float> | array<double> | array<int>; flags : int = 0) {
+    //! `PlotInfLines(...)` — infinite vertical (or Horizontal-flagged) reference lines.
+    PlotInfLines(label_id, values, flags)
+}
+
+// ===== Annotation / scalar items =====
+
+def public plot_text(text : string; x : double; y : double;
+                     pix_offset : float2 = float2(0.0f, 0.0f);
+                     flags : ImPlotTextFlags = ImPlotTextFlags.None) {
+    //! `PlotText(text, x, y, pix_offset, flags)` — draw a text label at a data point.
+    PlotText(text, x, y, pix_offset, flags)
+}
+
+def public plot_dummy(label_id : string; flags : ImPlotDummyFlags = ImPlotDummyFlags.None) {
+    //! `PlotDummy(label_id, flags)` — a legend entry with no drawn data.
+    PlotDummy(label_id, flags)
+}
+
+// ===== Coordinate conversion =====
+
+def public plot_to_pixels(x : double; y : double;
+                          x_axis : ImAxis = ImAxis.X1; y_axis : ImAxis = ImAxis.Y1) : float2 {
+    //! `PlotToPixels(x, y, ...)` — data coords → screen pixels (valid in-scope).
+    return PlotToPixels(x, y, x_axis, y_axis)
+}
+
+def public pixels_to_plot(px : float2;
+                          x_axis : ImAxis = ImAxis.X1; y_axis : ImAxis = ImAxis.Y1) : ImPlotPoint {
+    //! `PixelsToPlot(px, ...)` — screen pixels → data coords (valid in-scope).
+    return PixelsToPlot(px, x_axis, y_axis)
+}
