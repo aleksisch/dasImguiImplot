@@ -26,6 +26,11 @@ Source: ``examples/tutorial/subplots.das``.
    :language: das
    :linenos:
 
+Walkthrough
+===========
+
+.. video:: subplots.mp4
+
 The grid container
 ==================
 
@@ -42,3 +47,15 @@ The grid registers as ``PLOT_WIN/GRID`` and each cell nests beneath it —
 ``PLOT_WIN/GRID/P_SIN``, ``…/P_COS``, and so on. The ``test_subplots`` regression
 opens both the grid (asserting ``BeginSubplots`` returned true) and the first cell
 by its nested path, confirming the cells snapshot independently.
+
+Box zoom one cell
+=================
+
+Every cell is independently interactive. Right-drag a box inside a cell — the
+tick-marked rubber band in the walkthrough — and that cell zooms to the box.
+Because this grid uses ``ImPlotSubplotFlags.None`` (no linked axes), only the boxed
+cell zooms; the other three keep their full range. Linking is opt-in: add
+``ImPlotSubplotFlags.LinkAllX`` / ``LinkAllY`` (or the per-row/col variants) to make
+the cells share an axis, so a zoom or pan in one drives them all. The recording
+drives the right-drag with real synthetic input and asserts the boxed cell's range
+shrank while a neighbour's stayed put, so a zoom that bled across cells fails it.
