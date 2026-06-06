@@ -35,7 +35,7 @@ var g_bars : array<int>
 
 [export]
 def init() {
-    harness_init("dasImguiImplot — multi_series", 900, 640)
+    harness_init("dasImguiImplot — multi_series", 1280, 860)
     g_ctx = implot::CreateContext()
     g_sin <- [for (i in range(200)); double(sin(float(i) * 0.05f))]
     g_cos <- [for (i in range(200)); double(cos(float(i) * 0.05f))]
@@ -50,11 +50,11 @@ def update() {
     harness_new_frame()
 
     SetNextWindowPos(float2(20.0, 20.0), ImGuiCond.Always)
-    SetNextWindowSize(float2(860.0, 600.0), ImGuiCond.Always)
+    SetNextWindowSize(float2(1240.0, 820.0), ImGuiCond.Always)
     window(PLOT_WIN, (text = "multi series", closable = false,
                       flags = ImGuiWindowFlags.None)) {
         text("v2 plot scope: snapshot-registered, multi-type items, per-item styling.")
-        plot(WAVES, (title = "waves", size = float2(-1.0f, -1.0f), flags = ImPlotFlags.None)) {
+        plot(WAVES, (title = "waves", size = float2(-1.0f, 480.0f), flags = ImPlotFlags.None)) {
             setup_axes("sample", "value")
             setup_axes_limits(0.0lf, 200.0lf, -1.5lf, 1.5lf)
             next_line_style(float4(0.30f, 0.70f, 1.00f, 1.00f), 2.0f)
@@ -63,7 +63,7 @@ def update() {
             next_marker_style(ImPlotMarker.Circle, 4.0f)
             plot_scatter("samples", g_pts_x, g_pts_y)
         }
-        plot(BARS, (title = "bars (int data)", size = float2(-1.0f, 200.0f),
+        plot(BARS, (title = "bars (int data)", size = float2(-1.0f, 240.0f),
                     flags = ImPlotFlags.None)) {
             setup_axes("bucket", "count")
             plot_bars("counts", g_bars)

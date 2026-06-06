@@ -30,7 +30,7 @@ var g_cos : array<double>
 
 [export]
 def init() {
-    harness_init("dasImguiImplot — line_plot", 800, 600)
+    harness_init("dasImguiImplot — line_plot", 1100, 760)
     g_ctx = implot::CreateContext()
     g_sin <- [for (i in range(200)); double(sin(float(i) * 0.05f))]
     g_cos <- [for (i in range(200)); double(cos(float(i) * 0.05f))]
@@ -42,11 +42,11 @@ def update() {
     harness_new_frame()
 
     SetNextWindowPos(float2(20.0, 20.0), ImGuiCond.Always)
-    SetNextWindowSize(float2(760.0, 560.0), ImGuiCond.Always)
+    SetNextWindowSize(float2(1060.0, 720.0), ImGuiCond.Always)
     window(PLOT_WIN, (text = "line plot", closable = false,
                       flags = ImGuiWindowFlags.None)) {
         text("with_plot scopes the chart; each plot_line draws one series.")
-        with_plot("waves", float2(-1.0f, -1.0f)) {
+        with_plot("waves", float2(-1.0f, 620.0f)) {
             setup_axes("sample", "value")
             setup_axes_limits(0.0lf, 200.0lf, -1.5lf, 1.5lf)
             plot_line("sin", g_sin)
