@@ -104,6 +104,28 @@ FWD_HISTOGRAM(f, float) FWD_HISTOGRAM(d, double) FWD_HISTOGRAM(i, int32_t)
                                        ImPlotRect(x0, x1, y0, y1), flags); }
 FWD_HISTOGRAM2D(f, float) FWD_HISTOGRAM2D(d, double) FWD_HISTOGRAM2D(i, int32_t)
 
+// ===== Categorical / labelled families =====
+// These take a per-series label array. A daslang array<string> binds as TArray<char*>
+// whose contiguous element block IS const char* const[] (each element is already a
+// char*), so labels.data casts straight through with no per-call repacking — same fact
+// dasImgui's list_box relies on. Values stay element-typed like the other families.
+
+// BarGroups: item_count series x group_count groups, row-major (values[item*group_count+group])
+#define FWD_BARGROUPS(SUF, T) \
+    void PlotBarGroups_##SUF(const TArray<char*>& labels, const TArray<T>& v, int item_count, int group_count, \
+                             double group_size, double shift, int flags) { \
+        ImPlot::PlotBarGroups((const char* const*)labels.data, (const T*)v.data, item_count, group_count, \
+                              group_size, shift, flags); }
+FWD_BARGROUPS(f, float) FWD_BARGROUPS(d, double) FWD_BARGROUPS(i, int32_t)
+
+// PieChart: one slice per (label, value); count = min(labels, values). Empty fmt => no labels.
+#define FWD_PIECHART(SUF, T) \
+    void PlotPieChart_##SUF(const TArray<char*>& labels, const TArray<T>& v, double x, double y, double radius, \
+                            const char* label_fmt, double angle0, int flags) { \
+        ImPlot::PlotPieChart((const char* const*)labels.data, (const T*)v.data, IMPLOT_N2(labels, v), \
+                             x, y, radius, implot_nz(label_fmt), angle0, flags); }
+FWD_PIECHART(f, float) FWD_PIECHART(d, double) FWD_PIECHART(i, int32_t)
+
 void Module_dasIMPLOT::initAotAlias () {
 }
 
@@ -162,6 +184,14 @@ void Module_dasIMPLOT::initAotAlias () {
     addExtern<DAS_BIND_FUN(das::PlotHistogram2D_##SUF)>(*this, lib, "PlotHistogram2D", \
         SideEffects::modifyExternal, "das::PlotHistogram2D_" #SUF)->args({"label","xs","ys","x_bins","y_bins","x0","x1","y0","y1","flags"});
 
+#define REG_BARGROUPS(SUF) \
+    addExtern<DAS_BIND_FUN(das::PlotBarGroups_##SUF)>(*this, lib, "PlotBarGroups", \
+        SideEffects::modifyExternal, "das::PlotBarGroups_" #SUF)->args({"label_ids","values","item_count","group_count","group_size","shift","flags"});
+
+#define REG_PIECHART(SUF) \
+    addExtern<DAS_BIND_FUN(das::PlotPieChart_##SUF)>(*this, lib, "PlotPieChart", \
+        SideEffects::modifyExternal, "das::PlotPieChart_" #SUF)->args({"label_ids","values","x","y","radius","label_fmt","angle0","flags"});
+
 void Module_dasIMPLOT::initMain () {
     REG_LINELIKE_ALL(PlotLine)
     REG_LINELIKE_ALL(PlotScatter)
@@ -175,6 +205,8 @@ void Module_dasIMPLOT::initMain () {
     REG_HEATMAP(f) REG_HEATMAP(d) REG_HEATMAP(i)
     REG_HISTOGRAM(f) REG_HISTOGRAM(d) REG_HISTOGRAM(i)
     REG_HISTOGRAM2D(f) REG_HISTOGRAM2D(d) REG_HISTOGRAM2D(i)
+    REG_BARGROUPS(f) REG_BARGROUPS(d) REG_BARGROUPS(i)
+    REG_PIECHART(f) REG_PIECHART(d) REG_PIECHART(i)
 
     // const ImVec2&/ImVec4& -> by value (so daslang passes float2/float4 by value);
     // mirrors dasImguiNodeEditor's initMain fixup.
