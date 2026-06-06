@@ -14,8 +14,8 @@ regression under ``tests/integration/`` that drives or asserts on the same plot
 checks the reported position).
 
 The tutorials build up in order: a first chart, then the v2 snapshot scope, the
-item families (areas, real-time, multiple axes, grids, statistics), and finally
-the interactive surface (drag tools, colormaps, live query).
+item families (areas, real-time, multiple axes, grids, statistics, categories),
+and finally the interactive surface (drag tools, colormaps, live query).
 
 .. toctree::
    :maxdepth: 1
@@ -27,6 +27,7 @@ the interactive surface (drag tools, colormaps, live query).
    multi_axes.rst
    subplots.rst
    heatmap_histogram.rst
+   bar_groups_and_pie.rst
    drag_tools.rst
    colormaps_and_style.rst
    query_and_hover.rst
