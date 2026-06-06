@@ -216,13 +216,16 @@ def public legend_toggle(s : PlotSession; series : string) {
     //! (ImPlot hides / shows the series). Moves the cursor onto the entry, waits until it reports
     //! hovered (so the press can't batch ahead of HoveredId — the windowed-vsync press-before-hover
     //! race), then clicks in place and blocks until the gesture settles. Silently no-ops when the
-    //! entry is absent — the caller MUST gate the effect with `wait_for_series_shown`.
+    //! entry is absent OR hover never registers — the caller MUST gate the effect with
+    //! `wait_for_series_shown`.
     var snap = snapshot(s.app)
     let v = legend_entry(snap, s, series)
     return if (!v.found)
     let center = ((v.rect.x + v.rect.z) * 0.5f, (v.rect.y + v.rect.w) * 0.5f)
     move_to(s.app, center)
-    wait_for_legend_hover(s, series)       // sync: don't press until the entry is actually hovered
+    // Click only once hover registers; on timeout bail rather than click blind (a dropped press
+    // or a stale target) — the caller's wait_for_series_shown gate then fails loudly.
+    return if (wait_for_legend_hover(s, series) == null)
     var events : array<JsonValue?>
     click_at(events, 0, center)
     post_command(s.app, "imgui_mouse_play", JV((events = events)))
