@@ -1,0 +1,11 @@
+options gen2
+require daslib/fio
+
+[export]
+def initialize(project_path : string) {
+    if (das_is_dll_build()) {
+        register_dynamic_module("{project_path}/dasModuleImplot.shared_module", "Module_dasIMPLOT")
+    }
+    // daslib wrapper modules (v1/v2/app/playwright/theme) are registered here as they
+    // are added in later milestones.
+}
