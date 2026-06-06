@@ -332,6 +332,107 @@ def public histogram2d(label_id : string; xs : array<auto(T)>; ys : array<T>;
     return PlotHistogram2D(label_id, xs, ys, x_bins, y_bins, x_min, x_max, y_min, y_max, flags)
 }
 
+// ===== Drag tools =====
+//
+// Interactive handles INSIDE a plot scope: the user drags them and their bound
+// value updates in place. Unlike the items above, a drag tool owns mutable state
+// (the value being dragged), so the caller passes a PERSISTENT state struct (a
+// global) — the wrapper mutates it through `addr` each frame and serializes it
+// into the snapshot under a path nested below the plot (`<plot>/<id>`), with a
+// bbox computed from the handle's DATA position via PlotToPixels (a drag tool
+// submits no normal ImGui item, so GetItemRect — what widget_finalize captures —
+// would be stale). That bbox is what a test/playwright synth-drags onto.
+
+struct DragPointState {
+    //! A draggable (x,y) point handle. x/y are plot DATA coordinates and update in
+    //! place on drag; `held` is true on the frame the handle is grabbed or dragged.
+    x : double
+    y : double
+    held : bool
+}
+
+def public drag_point(var state : DragPointState; id : string; col : float4;
+                      size : float = 4.0f;
+                      flags : ImPlotDragToolFlags = ImPlotDragToolFlags.None) {
+    //! `DragPoint(id, &x, &y, col, size, flags)` — a draggable point. Owns `state`
+    //! (x,y persist across frames); registers under `<plot>/<id>` with the handle's
+    //! screen bbox so a test can target and drag it.
+    let seed = int(GetID(id))
+    widget_prelude(id)
+    container_path_push(id)
+    state.held = DragPoint(seed, unsafe(addr(state.x)), unsafe(addr(state.y)), col, size, flags)
+    let px = PlotToPixels(state.x, state.y, ImAxis.X1, ImAxis.Y1)
+    let r = size + 4.0f
+    finalize_state(id, "implot_drag_point", state,
+                   float4(px.x - r, px.y - r, px.x + r, px.y + r))
+    container_path_pop()
+}
+
+struct DragLineState {
+    //! A draggable infinite line. `value` is its position on its own axis (x for
+    //! drag_line_x, y for drag_line_y) in DATA coords; `held` true while grabbed.
+    value : double
+    held : bool
+}
+
+def public drag_line_x(var state : DragLineState; id : string; col : float4;
+                       thickness : float = 1.0f;
+                       flags : ImPlotDragToolFlags = ImPlotDragToolFlags.None) {
+    //! `DragLineX(id, &x, col, thickness, flags)` — a draggable vertical line at x=value.
+    let seed = int(GetID(id))
+    widget_prelude(id)
+    container_path_push(id)
+    state.held = DragLineX(seed, unsafe(addr(state.value)), col, thickness, flags)
+    let ppos = GetPlotPos()
+    let psz = GetPlotSize()
+    let sx = PlotToPixels(state.value, 0.0lf, ImAxis.X1, ImAxis.Y1).x
+    finalize_state(id, "implot_drag_line_x", state,
+                   float4(sx - 3.0f, ppos.y, sx + 3.0f, ppos.y + psz.y))
+    container_path_pop()
+}
+
+def public drag_line_y(var state : DragLineState; id : string; col : float4;
+                       thickness : float = 1.0f;
+                       flags : ImPlotDragToolFlags = ImPlotDragToolFlags.None) {
+    //! `DragLineY(id, &y, col, thickness, flags)` — a draggable horizontal line at y=value.
+    let seed = int(GetID(id))
+    widget_prelude(id)
+    container_path_push(id)
+    state.held = DragLineY(seed, unsafe(addr(state.value)), col, thickness, flags)
+    let ppos = GetPlotPos()
+    let psz = GetPlotSize()
+    let sy = PlotToPixels(0.0lf, state.value, ImAxis.X1, ImAxis.Y1).y
+    finalize_state(id, "implot_drag_line_y", state,
+                   float4(ppos.x, sy - 3.0f, ppos.x + psz.x, sy + 3.0f))
+    container_path_pop()
+}
+
+struct DragRectState {
+    //! A draggable axis-aligned rectangle in DATA coords — edges, corners, and body
+    //! all drag the bounds in place. `held` true while any part is grabbed.
+    x_min : double
+    y_min : double
+    x_max : double
+    y_max : double
+    held : bool
+}
+
+def public drag_rect(var state : DragRectState; id : string; col : float4;
+                     flags : ImPlotDragToolFlags = ImPlotDragToolFlags.None) {
+    //! `DragRect(id, &x1,&y1,&x2,&y2, col, flags)` — a draggable rectangle region.
+    let seed = int(GetID(id))
+    widget_prelude(id)
+    container_path_push(id)
+    state.held = DragRect(seed, unsafe(addr(state.x_min)), unsafe(addr(state.y_min)),
+                          unsafe(addr(state.x_max)), unsafe(addr(state.y_max)), col, flags)
+    // data y_max projects to the SMALLER screen y, so (x_min,y_max)=top-left,
+    // (x_max,y_min)=bottom-right.
+    let tl = PlotToPixels(state.x_min, state.y_max, ImAxis.X1, ImAxis.Y1)
+    let br = PlotToPixels(state.x_max, state.y_min, ImAxis.X1, ImAxis.Y1)
+    finalize_state(id, "implot_drag_rect", state, float4(tl.x, tl.y, br.x, br.y))
+    container_path_pop()
+}
+
 // ===== Coordinate conversion =====
 
 def public plot_to_pixels(x : double; y : double;

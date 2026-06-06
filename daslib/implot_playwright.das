@@ -26,6 +26,13 @@ struct AxisLimits {
     y_max : double
 }
 
+struct DragRectValue {
+    x_min : double
+    y_min : double
+    x_max : double
+    y_max : double
+}
+
 def public implot_open(app : ImguiApp; plot_path : string; timeout_sec : float = 15.0f) : PlotSession {
     //! Wait for `plot_path` to render, returning a session bundling {app, plot}. ImPlot is
     //! stateless (no editor handle to capture) — the session is just the (app, path) pair
@@ -80,6 +87,56 @@ def public plot_center(var snap : JsonValue?; s : PlotSession) : tuple<float; fl
     //! (the tuple form `move_to` expects).
     let bb = plot_bbox(snap, s)
     return ((bb.x + bb.z) * 0.5f, (bb.y + bb.w) * 0.5f)
+}
+
+// ===== drag-tool handles =====
+//
+// A drag tool registers under `<plot>/<id>` with the handle's screen bbox, so the
+// generic `drag(app, handle_path(s, id), dx, dy)` presses its center and drags it.
+// These readers pull the bound VALUE out of the handle's payload; `wait_for_point_moved`
+// gates a synthetic drag landing (value moved off its baseline) before asserting.
+
+def public handle_path(s : PlotSession; id : string) : string {
+    //! Snapshot path of a drag handle declared as `<id>` inside this session's plot.
+    return "{s.plot}/{id}"
+}
+
+def private handle_payload(var snap : JsonValue?; path : string) : JsonValue? {
+    return find_widget(snap, path)?["payload"]
+}
+
+def public drag_point_value(var snap : JsonValue?; path : string) : tuple<double; double> {
+    //! A `drag_point` handle's bound (x, y) in DATA coords. (0,0) if the path is absent.
+    let p = handle_payload(snap, path)
+    return (p?["x"] ?? 0.0lf, p?["y"] ?? 0.0lf)
+}
+
+def public drag_line_value(var snap : JsonValue?; path : string) : double {
+    //! A `drag_line_x` / `drag_line_y` handle's bound position on its axis (DATA coords).
+    return handle_payload(snap, path)?["value"] ?? 0.0lf
+}
+
+def public drag_rect_value(var snap : JsonValue?; path : string) : DragRectValue {
+    //! A `drag_rect` handle's bound bounds (DATA coords). All zero if the path is absent.
+    let p = handle_payload(snap, path)
+    return DragRectValue(x_min = p?["x_min"] ?? 0.0lf, y_min = p?["y_min"] ?? 0.0lf,
+                         x_max = p?["x_max"] ?? 0.0lf, y_max = p?["y_max"] ?? 0.0lf)
+}
+
+def public drag_held(var snap : JsonValue?; path : string) : bool {
+    //! True iff the handle was grabbed / dragged on the snapshot's frame.
+    return handle_payload(snap, path)?["held"] ?? false
+}
+
+def public wait_for_point_moved(s : PlotSession; id : string; from : tuple<double; double>;
+                                tol : double = 1.0e-6lf; max_frames : int = 300) : JsonValue? {
+    //! Poll until the `<id>` drag-point's value moves off `from` by more than `tol` on either
+    //! axis — the gate for a synthetic `drag` actually moving the handle. Snapshot or null.
+    let path = handle_path(s, id)
+    return wait_until(s.app, max_frames) $(var snap) {
+        let v = drag_point_value(snap, path)
+        return (abs(v._0 - from._0) > tol || abs(v._1 - from._1) > tol)
+    }
 }
 
 // ===== waits (snapshot-polled) =====
