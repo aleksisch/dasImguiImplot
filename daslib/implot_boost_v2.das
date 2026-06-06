@@ -150,6 +150,19 @@ def public setup_legend(location : ImPlotLocation;
     SetupLegend(location, flags)
 }
 
+def public set_axis(axis : ImAxis) {
+    //! `SetAxis(axis)` — route the items submitted AFTER this call to `axis` (e.g.
+    //! `set_axis(ImAxis.Y2)` before a `plot_line` puts it on the second y axis set up
+    //! by `setup_axis(ImAxis.Y2, ...)`). Affects only the current y (or x) selection.
+    SetAxis(axis)
+}
+
+def public set_axes(x_axis : ImAxis; y_axis : ImAxis) {
+    //! `SetAxes(x_axis, y_axis)` — route subsequent items to this x/y axis PAIR in one
+    //! call (the two-axis form of `set_axis`).
+    SetAxes(x_axis, y_axis)
+}
+
 // ===== Next-item styling (SetNext*) =====
 //
 // Auto-sentinels mirror ImPlot's defaults: weight/size/alpha = -1 ("auto"),
