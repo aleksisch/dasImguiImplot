@@ -66,23 +66,24 @@ struct PlotScopeState {
     legend : array<LegendEntry>     //! per-series legend entries (label / shown / clickable rect), legend order; empty when not visible
 }
 
-def private capture_legend(var state : PlotScopeState) {
-    // Read the current plot's legend (valid only between BeginPlot/EndPlot) into the snapshot.
+def private capture_legend(var state : PlotScopeState; title : string) {
+    // Read the plot's legend into the snapshot AFTER EndPlot, by title — the rect / shown are
+    // written during EndPlot's legend render, so GetPlot(title) gives current-frame values.
     // Labels come from ImPlot as a fresh string per call, so we (re)build them only when the
     // entry set changes — rebuilding every frame would churn the heap. Rects / shown are scalars,
     // refreshed every frame. (A relabel with no count change would read stale — exotic for a
     // steady plot, and the rect / shown stay live regardless.)
-    let n = LegendEntryCount()
+    let n = LegendEntryCount(title)
     if (length(state.legend) != n) {
         state.legend |> clear()
         state.legend |> reserve(n)
         for (i in range(n)) {
-            state.legend |> emplace(LegendEntry(series = LegendEntryLabel(i)))
+            state.legend |> emplace(LegendEntry(series = LegendEntryLabel(title, i)))
         }
     }
     for (i in range(n)) {
-        let r = LegendEntryRect(i)
-        state.legend[i].shown = LegendEntryShown(i)
+        let r = LegendEntryRect(title, i)
+        state.legend[i].shown = LegendEntryShown(title, i)
         state.legend[i].x0 = r.x
         state.legend[i].y0 = r.y
         state.legend[i].x1 = r.z
@@ -102,7 +103,6 @@ def plot(var state : PlotScopeState; title : string; size : float2; flags : ImPl
     var box = float4(0.0f, 0.0f, 0.0f, 0.0f)
     if (im_open) {
         invoke(blk)
-        capture_legend(state)
         let ppos = GetPlotPos()
         let psz = GetPlotSize()
         let lim = GetPlotLimits(ImAxis.X1, ImAxis.Y1)
@@ -123,6 +123,9 @@ def plot(var state : PlotScopeState; title : string; size : float2; flags : ImPl
         }
         box = float4(ppos.x, ppos.y, ppos.x + psz.x, ppos.y + psz.y)
         EndPlot()
+        // AFTER EndPlot: the legend rects / shown are written during EndPlot's render, and
+        // GetPlot(title) still resolves the just-rendered plot, so this captures current-frame.
+        capture_legend(state, title)
     } else {
         state.legend |> clear()
     }

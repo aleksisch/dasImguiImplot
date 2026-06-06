@@ -134,31 +134,35 @@ FWD_BARGROUPS(f, float) FWD_BARGROUPS(d, double) FWD_BARGROUPS(i, int32_t)
                              x, y, radius, implot_nz(label_fmt), angle0, flags); }
 FWD_PIECHART(f, float) FWD_PIECHART(d, double) FWD_PIECHART(i, int32_t)
 
-// ===== Legend telemetry (read inside a BeginPlot/EndPlot scope) =====
+// ===== Legend telemetry (read AFTER EndPlot, by plot title) =====
 // ImPlot keeps per-series visibility (ImPlotItem::Show) and the per-entry legend button rect
-// internal. The v2 `plot` scope reads these between item submission and EndPlot to serialize a
-// per-series {label, shown, rect} list into its snapshot, so a test / recording can target a
-// synthetic legend-toggle click and verify the series hid / showed. `index` is the legend order
-// (== submission order, unless the Sort flag). All return empty / zero when no plot is current
-// or the index is out of range. The rect is screen-space pixels (the value patched into
-// LegendHoverRect every frame — see implot.cpp).
-int LegendEntryCount() {
-    ImPlotPlot* plot = ImPlot::GetCurrentPlot();
+// internal, and BOTH are written DURING EndPlot's legend render (ShowLegendEntries) — so the v2
+// `plot` scope reads them right AFTER EndPlot via GetPlot(title), which gives current-frame
+// values (the plot persists past EndPlot; Legend.Indices isn't reset until the next BeginPlot).
+// Reading before EndPlot would serialize last frame's rects (zero on the first visible frame,
+// stale after a resize), so the title-keyed post-EndPlot read is the correct one. The scope
+// serializes a per-series {label, shown, rect} list into the snapshot so a test / recording can
+// target a synthetic legend-toggle click and verify the series hid / showed. `index` is always
+// submission order — GetLegendItem/Label index Legend.Indices; the Sort flag only reorders the
+// render pass, not this. The rect is screen-space pixels (LegendHoverRect, patched to update
+// every frame — see implot.cpp). All return empty / zero when the plot or index is unknown.
+int LegendEntryCount(const char* title) {
+    ImPlotPlot* plot = ImPlot::GetPlot(title);
     return plot ? plot->Items.GetLegendCount() : 0;
 }
-const char* LegendEntryLabel(int index) {
-    ImPlotPlot* plot = ImPlot::GetCurrentPlot();
+const char* LegendEntryLabel(const char* title, int index) {
+    ImPlotPlot* plot = ImPlot::GetPlot(title);
     if (!plot || index < 0 || index >= plot->Items.GetLegendCount()) return "";
     return plot->Items.GetLegendLabel(index);
 }
-bool LegendEntryShown(int index) {
-    ImPlotPlot* plot = ImPlot::GetCurrentPlot();
+bool LegendEntryShown(const char* title, int index) {
+    ImPlotPlot* plot = ImPlot::GetPlot(title);
     if (!plot || index < 0 || index >= plot->Items.GetLegendCount()) return false;
     ImPlotItem* item = plot->Items.GetLegendItem(index);
     return item ? item->Show : false;
 }
-ImVec4 LegendEntryRect(int index) {
-    ImPlotPlot* plot = ImPlot::GetCurrentPlot();
+ImVec4 LegendEntryRect(const char* title, int index) {
+    ImPlotPlot* plot = ImPlot::GetPlot(title);
     if (!plot || index < 0 || index >= plot->Items.GetLegendCount()) return ImVec4(0, 0, 0, 0);
     ImPlotItem* item = plot->Items.GetLegendItem(index);
     if (!item) return ImVec4(0, 0, 0, 0);
@@ -248,15 +252,15 @@ void Module_dasIMPLOT::initMain () {
     REG_BARGROUPS(f) REG_BARGROUPS(d) REG_BARGROUPS(i)
     REG_PIECHART(f) REG_PIECHART(d) REG_PIECHART(i)
 
-    // Legend telemetry — pure reads of the current plot's internal item/legend state.
+    // Legend telemetry — pure reads of a plot's internal item/legend state, keyed by title.
     addExtern<DAS_BIND_FUN(das::LegendEntryCount)>(*this, lib, "LegendEntryCount",
-        SideEffects::accessExternal, "das::LegendEntryCount");
+        SideEffects::accessExternal, "das::LegendEntryCount")->args({"title"});
     addExtern<DAS_BIND_FUN(das::LegendEntryLabel)>(*this, lib, "LegendEntryLabel",
-        SideEffects::accessExternal, "das::LegendEntryLabel")->args({"index"});
+        SideEffects::accessExternal, "das::LegendEntryLabel")->args({"title", "index"});
     addExtern<DAS_BIND_FUN(das::LegendEntryShown)>(*this, lib, "LegendEntryShown",
-        SideEffects::accessExternal, "das::LegendEntryShown")->args({"index"});
+        SideEffects::accessExternal, "das::LegendEntryShown")->args({"title", "index"});
     addExtern<DAS_BIND_FUN(das::LegendEntryRect)>(*this, lib, "LegendEntryRect",
-        SideEffects::accessExternal, "das::LegendEntryRect")->args({"index"});
+        SideEffects::accessExternal, "das::LegendEntryRect")->args({"title", "index"});
 
     // const ImVec2&/ImVec4& -> by value (so daslang passes float2/float4 by value);
     // mirrors dasImguiNodeEditor's initMain fixup.

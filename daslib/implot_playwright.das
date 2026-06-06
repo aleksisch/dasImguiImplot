@@ -226,9 +226,13 @@ def public legend_toggle(s : PlotSession; series : string) {
 
 def public wait_for_series_shown(s : PlotSession; series : string; expected : bool;
                                  max_frames : int = 300) : JsonValue? {
-    //! Poll until the `series`' visibility equals `expected` — the gate for a `legend_toggle`
-    //! actually landing. Returns the matching snapshot or null on timeout.
+    //! Poll until the `series`' legend entry is PRESENT and its visibility equals `expected` — the
+    //! gate for a `legend_toggle` actually landing. Requiring presence is deliberate: `series_shown`
+    //! reads false for both hidden AND absent, so gating on it alone would let "wait for hidden"
+    //! pass on a missing series (telemetry gone / wrong path) — a false-positive gate. Returns the
+    //! matching snapshot or null on timeout.
     return wait_until(s.app, max_frames) $(var snap) {
-        return series_shown(snap, s, series) == expected
+        let e = legend_entry(snap, s, series)
+        return e.found && e.shown == expected
     }
 }
