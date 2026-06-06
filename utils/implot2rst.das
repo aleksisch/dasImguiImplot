@@ -49,10 +49,11 @@ def document_module_imgui_implot_playwright() {
     var mod = find_module("imgui_implot_playwright")
     var groups <- array<DocGroup>(
         group_by_regex("Session",            mod, %regex~^implot_open$%%),
-        group_by_regex("Reads",              mod, %regex~^(implot_snapshot|plot_payload|plot_visible|plot_hovered|plot_axis_limits|plot_mouse_pos|plot_bbox|plot_center)$%%),
+        group_by_regex("Reads",              mod, %regex~^(implot_snapshot|plot_payload|plot_visible|plot_hovered|plot_axis_limits|plot_axis_limit|plot_mouse_pos|plot_bbox|plot_center)$%%),
+        group_by_regex("Axis drag",          mod, %regex~^drag_axis$%%),
         group_by_regex("Drag-tool handles",  mod, %regex~^(handle_path|drag_point_value|drag_line_value|drag_rect_value|drag_held)$%%),
         group_by_regex("Legend",             mod, %regex~^(legend_entry|legend_entry_center|series_shown|legend_toggle|wait_for_legend_hover|wait_for_series_shown)$%%),
-        group_by_regex("Polling / await",    mod, %regex~^(implot_wait_visible|wait_for_axis_limits|wait_for_hovered|wait_for_point_moved)$%%),
+        group_by_regex("Polling / await",    mod, %regex~^(implot_wait_visible|wait_for_axis_limits|wait_for_axis_limit_changed|wait_for_hovered|wait_for_point_moved)$%%),
         hide_group(group_by_regex("Internal", mod, %regex~^(_|priv_).*%%))
     )
     document("ImPlot playwright — ImPlot-aware test layer over imgui_playwright (PlotSession + plot_* / drag_* readers and wait_for_* polls)", mod, "imgui_implot_playwright.rst", groups)

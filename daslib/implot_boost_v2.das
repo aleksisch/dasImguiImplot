@@ -60,20 +60,30 @@ struct PlotScopeState {
     @optional x_max : double        //! X axis upper limit
     @optional y_min : double        //! Y axis lower limit
     @optional y_max : double        //! Y axis upper limit
+    @optional x2_min : double       //! X2 axis lower limit (present only when X2 is enabled)
+    @optional x2_max : double       //! X2 axis upper limit
+    @optional x3_min : double       //! X3 axis lower limit (present only when X3 is enabled)
+    @optional x3_max : double       //! X3 axis upper limit
+    @optional y2_min : double       //! Y2 axis lower limit (present only when Y2 is enabled)
+    @optional y2_max : double       //! Y2 axis upper limit
+    @optional y3_min : double       //! Y3 axis lower limit (present only when Y3 is enabled)
+    @optional y3_max : double       //! Y3 axis upper limit
     @optional hovered : bool        //! IsPlotHovered() this frame
     @optional mouse_x : double      //! GetPlotMousePos().x (data coords)
     @optional mouse_y : double      //! GetPlotMousePos().y
+    @optional legend_retries : int  //! internal: frames left to re-read not-yet-resolved legend labels
     visible : bool                  //! BeginPlot returned true (plot drew this frame)
     legend : array<LegendEntry>     //! per-series legend entries (label / shown / clickable rect), legend order; empty when not visible
 }
 
+let private LEGEND_LABEL_RETRY_FRAMES = 240   // bounded window to resolve a just-registered item's label
+
 def private capture_legend(var state : PlotScopeState; title : string) {
     // Read the plot's legend into the snapshot AFTER EndPlot, by title — the rect / shown are
-    // written during EndPlot's legend render, so GetPlot(title) gives current-frame values.
-    // Labels come from ImPlot as a fresh string per call, so we (re)build them only when the
-    // entry set changes — rebuilding every frame would churn the heap. Rects / shown are scalars,
-    // refreshed every frame. (A relabel with no count change would read stale — exotic for a
-    // steady plot, and the rect / shown stay live regardless.)
+    // written during EndPlot's legend render, so GetPlot(title) gives current-frame values. Labels
+    // come from ImPlot as a fresh string per call, so we cache them (rebuild only when the entry set
+    // changes) rather than re-allocating every frame. Rects / shown are cheap scalars, refreshed
+    // every frame. (A relabel with no count change reads stale — exotic for a steady plot.)
     let n = LegendEntryCount(title)
     if (length(state.legend) != n) {
         state.legend |> clear()
@@ -81,15 +91,27 @@ def private capture_legend(var state : PlotScopeState; title : string) {
         for (i in range(n)) {
             state.legend |> emplace(LegendEntry(series = LegendEntryLabel(title, i)))
         }
+        state.legend_retries = LEGEND_LABEL_RETRY_FRAMES
     }
+    // A newly-registered item reports into the legend (count / rect / show) a frame or two before
+    // ImPlot resolves its label, so the initial cache can hold "". Re-read empty labels for a bounded
+    // window after the entry set last changed, then stop — resolves the lag without per-frame string
+    // churn, and terminates even if a label were ever legitimately empty (a hidden "##id").
+    let resolving = state.legend_retries > 0
     for (i in range(n)) {
         let r = LegendEntryRect(title, i)
+        if (resolving && empty(state.legend[i].series)) {
+            state.legend[i].series = LegendEntryLabel(title, i)
+        }
         state.legend[i].shown = LegendEntryShown(title, i)
         state.legend[i].hovered = LegendEntryHovered(title, i)
         state.legend[i].x0 = r.x
         state.legend[i].y0 = r.y
         state.legend[i].x1 = r.z
         state.legend[i].y1 = r.w
+    }
+    if (state.legend_retries > 0) {
+        state.legend_retries--
     }
 }
 
@@ -114,6 +136,24 @@ def plot(var state : PlotScopeState; title : string; size : float2; flags : ImPl
         state.x_max = lim.X.Max
         state.y_min = lim.Y.Min
         state.y_max = lim.Y.Max
+        // Secondary axes (only on multi-axis plots) — captured when enabled so single-axis plots
+        // stay lean. record_check_changed on e.g. "y2_max" verifies an independent-axis pan.
+        if (AxisEnabled(int(ImAxis.X2))) {
+            state.x2_min = AxisRangeMin(int(ImAxis.X2))
+            state.x2_max = AxisRangeMax(int(ImAxis.X2))
+        }
+        if (AxisEnabled(int(ImAxis.X3))) {
+            state.x3_min = AxisRangeMin(int(ImAxis.X3))
+            state.x3_max = AxisRangeMax(int(ImAxis.X3))
+        }
+        if (AxisEnabled(int(ImAxis.Y2))) {
+            state.y2_min = AxisRangeMin(int(ImAxis.Y2))
+            state.y2_max = AxisRangeMax(int(ImAxis.Y2))
+        }
+        if (AxisEnabled(int(ImAxis.Y3))) {
+            state.y3_min = AxisRangeMin(int(ImAxis.Y3))
+            state.y3_max = AxisRangeMax(int(ImAxis.Y3))
+        }
         state.hovered = IsPlotHovered()
         // mouse-plot-pos is a projection of io.MousePos — meaningless when the
         // cursor isn't on screen (headless / off-window), where it reads as the
