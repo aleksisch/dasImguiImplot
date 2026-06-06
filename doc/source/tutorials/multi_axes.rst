@@ -28,6 +28,11 @@ Source: ``examples/tutorial/multi_axes.das``.
    :language: das
    :linenos:
 
+Walkthrough
+===========
+
+.. video:: multi_axes.mp4
+
 Enabling a second axis
 ======================
 
@@ -45,3 +50,14 @@ here, ``plot_line("pressure", …)`` lands on ``Y2``. The two-axis form
 ``set_axes(x_axis, y_axis)`` switches both at once. Because the snapshot captures
 ``GetPlotLimits(X1, Y1)``, the ``test_multi_axes`` regression asserts Y1 stays
 ``[0,30]`` — confirming pressure's ``[950,1050]`` lives on a genuinely separate axis.
+
+Panning one axis
+================
+
+Each axis can be panned on its own: left-drag on an axis' tick-label gutter — the
+strip just outside the data area — and **only that axis** moves. In the walkthrough,
+dragging the left gutter pans temperature while pressure holds, then dragging the
+right gutter pans pressure while temperature holds. This is the multi-axis payoff
+over a plain plot-body drag, which pans every axis at once. The recording drives both
+drags with real synthetic input and asserts the dragged axis' range moved while the
+other stayed put, so a no-op — or a drag that bled across to the other axis — fails it.
