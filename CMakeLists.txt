@@ -69,6 +69,10 @@ target_compile_definitions(dasModuleImplot PRIVATE
     $<$<CONFIG:MinSizeRel>:DAS_NO_ASSERTIONS>
     $<$<CONFIG:RelWithDebInfo>:DAS_NO_ASSERTIONS>
 )
+# Trim ImPlot's templated Plot* instantiations to the types we bind (float/double/int);
+# the default list instantiates all 10 numeric widths. Matches the hand-written
+# forwarders in src/dasIMPLOT.main.cpp.
+target_compile_definitions(dasModuleImplot PRIVATE "IMPLOT_CUSTOM_NUMERIC_TYPES=(float)(double)(ImS32)")
 target_include_directories(dasModuleImplot PRIVATE
     ${DASLANG_DIR}/include
     ${imgui_INCLUDE_DIR}
