@@ -27,6 +27,28 @@ Source: ``examples/tutorial/colormaps_and_style.das``.
    :language: das
    :linenos:
 
+Walkthrough
+===========
+
+.. video:: colormaps_and_style.mp4
+
+A guided tour of the two ways a colormap shows up. The cursor drifts to the
+colorbar beside the heatmap — Viridis is a *sequential* colormap, so the bar reads
+as a smooth ramp from low to high (the natural fit for a heatmap, and the
+sequential-ramp case forward-referenced from
+:ref:`heatmap and histogram <tutorial_implot_heatmap_histogram>`) — then glides to
+the six auto-colored series, each taking the next color from one Spectral scope. The
+recording self-verifies that both plots render at every beat.
+
+.. note::
+
+   Changing a colormap **live** does not recolor *existing* auto-colored items: ImPlot
+   caches each item's color by id on first draw, so ``with_colormap`` only colors items
+   created inside its scope for the first time. To recolor a steady set of items after a
+   colormap switch, call ImPlot's ``BustColorCache(plot_title)`` (clears the cache so the
+   items re-pull) or set each item's color explicitly from ``sample_colormap`` /
+   ``GetColormapColor``.
+
 The colormap scope
 ==================
 
