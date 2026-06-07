@@ -54,7 +54,7 @@ def public with_subplots(title : string; rows : int; cols : int; size : float2;
 
 // Begin a group of axis-aligned plots, run the body if it began, always End it.
 def public with_aligned_plots(group_id : string; blk : block) {
-    if (BeginAlignedPlots(group_id, true)) {
+    if (BeginAlignedPlots(group_id)) {   // native default vertical = true
         invoke(blk)
         EndAlignedPlots()
     }
@@ -101,7 +101,7 @@ def public with_style_var(idx : ImPlotStyleVar; value : float2; blk : block) {
 
 // Clip drawing to the plot area (optionally expanded by `expand` px) for the body.
 def public with_plot_clip_rect(blk : block) {
-    PushPlotClipRect(0.0f)
+    PushPlotClipRect()   // native default expand = 0
     invoke(blk)
     PopPlotClipRect()
 }
@@ -115,7 +115,7 @@ def public with_plot_clip_rect(expand : float; blk : block) {
 
 // A legend popup (default right mouse button); body emits its contents.
 def public with_legend_popup(label_id : string; blk : block) {
-    if (BeginLegendPopup(label_id, 1)) {
+    if (BeginLegendPopup(label_id)) {   // native default mouse button = right
         invoke(blk)
         EndLegendPopup()
     }
@@ -129,7 +129,7 @@ def public with_legend_popup(label_id : string; mouse_button : int; blk : block)
 
 // Drag-drop SOURCE on the last item / the whole plot / an axis.
 def public with_drag_drop_source_item(label_id : string; blk : block) {
-    if (BeginDragDropSourceItem(label_id, 0)) {
+    if (BeginDragDropSourceItem(label_id)) {   // native default flags = 0
         invoke(blk)
         EndDragDropSource()
     }
@@ -141,7 +141,7 @@ def public with_drag_drop_source_item(label_id : string; flags : int; blk : bloc
     }
 }
 def public with_drag_drop_source_plot(blk : block) {
-    if (BeginDragDropSourcePlot(0)) {
+    if (BeginDragDropSourcePlot()) {   // native default flags = 0
         invoke(blk)
         EndDragDropSource()
     }
@@ -153,7 +153,7 @@ def public with_drag_drop_source_plot(flags : int; blk : block) {
     }
 }
 def public with_drag_drop_source_axis(axis : ImAxis; blk : block) {
-    if (BeginDragDropSourceAxis(axis, 0)) {
+    if (BeginDragDropSourceAxis(axis)) {   // native default flags = 0
         invoke(blk)
         EndDragDropSource()
     }
