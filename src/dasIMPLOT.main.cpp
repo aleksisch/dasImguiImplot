@@ -150,10 +150,17 @@ int LegendEntryCount(const char* title) {
     ImPlotPlot* plot = ImPlot::GetPlot(title);
     return plot ? plot->Items.GetLegendCount() : 0;
 }
-const char* LegendEntryLabel(const char* title, int index) {
+// allocateString (das heap), NOT the raw GetLegendLabel pointer: that points into ImPlot's
+// per-frame Legend.Labels buffer, which the next BeginPlot/SetupFinish resets and may realloc — a
+// raw return would dangle by the time the snapshot serializes a frame later (empty/garbage on
+// macOS, issue #9). Owning the bytes here keeps the das string valid; mirrors the rest of the
+// string-returning API (dasImgui's text_range_string / ImGTB_Slice).
+char* LegendEntryLabel(const char* title, int index, das::Context* context, das::LineInfoArg* at) {
     ImPlotPlot* plot = ImPlot::GetPlot(title);
-    if (!plot || index < 0 || index >= plot->Items.GetLegendCount()) return "";
-    return plot->Items.GetLegendLabel(index);
+    if (!plot || index < 0 || index >= plot->Items.GetLegendCount())
+        return context->allocateString(nullptr, 0, at);
+    const char* label = plot->Items.GetLegendLabel(index);
+    return context->allocateString(label, strlen(label), at);
 }
 bool LegendEntryShown(const char* title, int index) {
     ImPlotPlot* plot = ImPlot::GetPlot(title);
@@ -287,7 +294,7 @@ void Module_dasIMPLOT::initMain () {
     addExtern<DAS_BIND_FUN(das::LegendEntryCount)>(*this, lib, "LegendEntryCount",
         SideEffects::accessExternal, "das::LegendEntryCount")->args({"title"});
     addExtern<DAS_BIND_FUN(das::LegendEntryLabel)>(*this, lib, "LegendEntryLabel",
-        SideEffects::accessExternal, "das::LegendEntryLabel")->args({"title", "index"});
+        SideEffects::accessExternal, "das::LegendEntryLabel")->args({"title", "index", "context", "lineinfo"});
     addExtern<DAS_BIND_FUN(das::LegendEntryShown)>(*this, lib, "LegendEntryShown",
         SideEffects::accessExternal, "das::LegendEntryShown")->args({"title", "index"});
     addExtern<DAS_BIND_FUN(das::LegendEntryHovered)>(*this, lib, "LegendEntryHovered",
