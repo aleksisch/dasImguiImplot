@@ -21,15 +21,6 @@ require daslib/json_boost public
 let HEAT = "PLOT_WIN/HEAT"
 let HIST = "PLOT_WIN/HIST"
 
-// Hold a beat's caption for the remainder of its voice dwell, measuring real elapsed
-// work (glide + verify) so the next say_begin can't fire early and overlap the voice.
-def hold_remainder(dwell : uint; t0 : int64) {
-    let elapsed = uint(get_time_usec(t0) / 1000)
-    if (dwell > elapsed) {
-        sleep(dwell - elapsed)
-    }
-}
-
 [export]
 def main {
     with_implot_recording_app("examples/tutorial/heatmap_histogram.das", "heatmap_histogram.apng", 45) $(app) {
@@ -57,7 +48,7 @@ def main {
         // ---- Beat 2: trace the heatmap grid ----
         let d_heat = say_begin(app, "a heatmap colors a grid by value", HEAT,
             [voice = "The heatmap draws a rows by columns grid, and each cell takes its color from its value through the active colormap, so the structure in the data shows up as a pattern of colors."])
-        let t_heat = ref_time_ticks()
+        let t_heat = record_frame_count(app)
         // Glide diagonally across the grid so the cursor sweeps the gradient.
         move_to(app, (hx + hw * 0.1f, hy + hh * 0.15f), 300)
         wait_for_mouse_idle(app)
@@ -66,16 +57,16 @@ def main {
         record_check(app, "the cursor lands hovered over the heatmap grid",
                      wait_for_hovered(heat, true) != null)
         record_check_rendered(app, HEAT, true)
-        hold_remainder(d_heat, t_heat)
+        hold_remainder_content(app, d_heat, t_heat)
 
         // ---- Beat 3: the histogram ----
         let d_hist = say_begin(app, "a histogram bins a sample set", HIST,
             [voice = "The histogram bins a flat array of samples into bars, showing the shape of the distribution. Here, a count per bin, with the bin count picked automatically from the sample size."])
-        let t_hist = ref_time_ticks()
+        let t_hist = record_frame_count(app)
         var gsnap = snapshot(app)
         move_to(app, plot_center(gsnap, hist), 900)
         wait_for_mouse_idle(app)
         record_check_rendered(app, HIST, true)
-        hold_remainder(d_hist, t_hist)
+        hold_remainder_content(app, d_hist, t_hist)
     }
 }

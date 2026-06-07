@@ -20,15 +20,6 @@ require daslib/json_boost public
 let BAND = "PLOT_WIN/BAND"
 let STAIRS = "PLOT_WIN/STAIRS"
 
-// Hold a beat's caption for the remainder of its voice dwell, measuring real elapsed
-// work (glide + verify) so the next say_begin can't fire early and overlap the voice.
-def hold_remainder(dwell : uint; t0 : int64) {
-    let elapsed = uint(get_time_usec(t0) / 1000)
-    if (dwell > elapsed) {
-        sleep(dwell - elapsed)
-    }
-}
-
 [export]
 def main {
     with_implot_recording_app("examples/tutorial/shaded_and_stairs.das", "shaded_and_stairs.apng", 45) $(app) {
@@ -56,23 +47,23 @@ def main {
         // ---- Beat 2: trace the widening band ----
         let d_band = say_begin(app, "a band fills between two curves", BAND,
             [voice = "The band fills the region between a lower and an upper curve. It widens to the right, the way a confidence interval grows, and the mean line is drawn on top."])
-        let t_band = ref_time_ticks()
+        let t_band = record_frame_count(app)
         // Glide along the band, left to right, at mid-height to trace the widening fill.
         move_to(app, (bx + bw * 0.08f, by + bh * 0.5f), 300)
         wait_for_mouse_idle(app)
         move_to(app, (bx + bw * 0.92f, by + bh * 0.5f), 1200)
         wait_for_mouse_idle(app)
         record_check_rendered(app, BAND, true)
-        hold_remainder(d_band, t_band)
+        hold_remainder_content(app, d_band, t_band)
 
         // ---- Beat 3: down to the step plot ----
         let d_stairs = say_begin(app, "stairs hold each sample", STAIRS,
             [voice = "Below, the step plot holds each sample until the next, drawing piecewise-constant data, and the shaded fill runs from the steps down to the baseline."])
-        let t_stairs = ref_time_ticks()
+        let t_stairs = record_frame_count(app)
         var ssnap = snapshot(app)
         move_to(app, plot_center(ssnap, stairs), 900)
         wait_for_mouse_idle(app)
         record_check_rendered(app, STAIRS, true)
-        hold_remainder(d_stairs, t_stairs)
+        hold_remainder_content(app, d_stairs, t_stairs)
     }
 }

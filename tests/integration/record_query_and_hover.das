@@ -5,7 +5,6 @@ options no_unused_function_arguments = false
 
 require imgui/imgui_implot_app public
 require imgui/imgui_implot_playwright public
-require implot
 require daslib/json public
 require daslib/json_boost public
 
@@ -19,15 +18,6 @@ require daslib/json_boost public
 //! teardown. The headless regression is test_query_and_hover.das.
 
 let CHART = "PLOT_WIN/CHART"
-
-// Hold a beat's caption for the remainder of its voice dwell, measuring real elapsed work
-// (glide + verify) so the next say_begin can't fire early and overlap the voice.
-def hold_remainder(dwell : uint; t0 : int64) {
-    let elapsed = uint(get_time_usec(t0) / 1000)
-    if (dwell > elapsed) {
-        sleep(dwell - elapsed)
-    }
-}
 
 [export]
 def main {
@@ -54,19 +44,19 @@ def main {
         // ---- Beat 2: the readout follows the cursor (glide to the left third) ----
         let d_l = say_begin(app, "the readout follows the cursor", CHART,
             [voice = "Move the cursor and the readout follows. Here, near the left, the label shows the x and y under the pointer, updated every frame."])
-        let t_l = ref_time_ticks()
+        let t_l = record_frame_count(app)
         move_to(app, (px + pw * 0.22f, py + ph * 0.42f), 900)
         wait_for_mouse_idle(app)
         var hl = wait_for_hovered(s, true)
         let mx_l = mouse_x(hl, s)
         record_check(app, "readout tracks the cursor near the left (x in [8,40], got {mx_l})",
                      mx_l >= 8.0lf && mx_l <= 40.0lf)
-        hold_remainder(d_l, t_l)
+        hold_remainder_content(app, d_l, t_l)
 
         // ---- Beat 3: read any point (glide across to the right third) ----
         let d_r = say_begin(app, "read any point", CHART,
             [voice = "Glide across to the right and the crosshair and the label track right along with it. You can read off the value at any point on the plot."])
-        let t_r = ref_time_ticks()
+        let t_r = record_frame_count(app)
         move_to(app, (px + pw * 0.74f, py + ph * 0.58f), 1100)
         wait_for_mouse_idle(app)
         var hr = wait_for_hovered(s, true)
@@ -75,7 +65,7 @@ def main {
                      mx_r >= 60.0lf && mx_r <= 92.0lf)
         record_check(app, "the readout moved right with the cursor (left {mx_l} < right {mx_r})",
                      mx_r > mx_l + 20.0lf)
-        hold_remainder(d_r, t_r)
+        hold_remainder_content(app, d_r, t_r)
     }
 }
 

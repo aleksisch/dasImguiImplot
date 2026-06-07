@@ -5,7 +5,6 @@ options no_unused_function_arguments = false
 
 require imgui/imgui_implot_app public
 require imgui/imgui_implot_playwright public
-require implot
 require math
 require daslib/json public
 require daslib/json_boost public
@@ -23,15 +22,6 @@ let SIN = "PLOT_WIN/GRID/P_SIN"
 let COS = "PLOT_WIN/GRID/P_COS"
 let LEAD_MS = 800u
 let HOLD_TOL = 0.5lf   // a non-boxed cell's range must not drift more than this (data units)
-
-// Hold a beat's caption for the remainder of its voice dwell, measuring real elapsed
-// work (gesture + verify) so the next say_begin can't fire early and overlap the voice.
-def hold_remainder(dwell : uint; t0 : int64) {
-    let elapsed = uint(get_time_usec(t0) / 1000)
-    if (dwell > elapsed) {
-        sleep(dwell - elapsed)
-    }
-}
 
 // Box-select zoom is a RIGHT-button drag (ImPlot's default Select binding): press inside the
 // cell, drag a box, release -> the cell zooms to the box. Walk a few waypoints so the rubber
@@ -93,14 +83,14 @@ def main {
         let to_pt = (px + pw * 0.75f, py + ph * 0.80f)
         let d_zoom = say_begin(app, "right drag a box to zoom one cell", SIN,
             [voice = "Right drag a box inside any cell to zoom into it. Because these cells are not linked, only that cell zooms. The others stay exactly where they were."])
-        let t_zoom = ref_time_ticks()
-        sleep(LEAD_MS)
+        let t_zoom = record_frame_count(app)
+        hold_content(app, LEAD_MS)
         box_zoom(app, from_pt, to_pt)
         var dz = wait_for_axis_limit_changed(sin, "x_max", sin_x0)
         record_check(app, "sin cell zoomed in by the box drag (x_max moved)", dz != null)
         // Independence: the neighbour cell's range is untouched, read on the same frame.
         record_check(app, "cos cell unchanged by the box zoom (cells are independent)",
                      abs(plot_axis_limit(dz, cos, "x_max") - cos_x0) < HOLD_TOL)
-        hold_remainder(d_zoom, t_zoom)
+        hold_remainder_content(app, d_zoom, t_zoom)
     }
 }

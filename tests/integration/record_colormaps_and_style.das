@@ -22,15 +22,6 @@ require daslib/json_boost public
 let HEAT = "PLOT_WIN/HEAT"
 let LINES = "PLOT_WIN/LINES"
 
-// Hold a beat's caption for the remainder of its voice dwell, measuring real elapsed
-// work (glide + verify) so the next say_begin can't fire early and overlap the voice.
-def hold_remainder(dwell : uint; t0 : int64) {
-    let elapsed = uint(get_time_usec(t0) / 1000)
-    if (dwell > elapsed) {
-        sleep(dwell - elapsed)
-    }
-}
-
 [export]
 def main {
     with_implot_recording_app("examples/tutorial/colormaps_and_style.das", "colormaps_and_style.apng", 45) $(app) {
@@ -58,21 +49,21 @@ def main {
         // ---- Beat 2: the colorbar reads as a smooth ramp (the sequential map) ----
         let d_heat = say_begin(app, "a sequential map reads as a ramp", HEAT,
             [voice = "Viridis is a sequential colormap, so the colorbar beside the heatmap reads as a smooth ramp from low to high. That is the natural fit for a heatmap."])
-        let t_heat = ref_time_ticks()
+        let t_heat = record_frame_count(app)
         // Drift toward the colorbar on the heatmap's right edge.
         move_to(app, (hx + hw * 0.96f, hy + hh * 0.5f), 900)
         wait_for_mouse_idle(app)
         record_check_rendered(app, HEAT, true)
-        hold_remainder(d_heat, t_heat)
+        hold_remainder_content(app, d_heat, t_heat)
 
         // ---- Beat 3: auto-colored series ----
         let d_lines = say_begin(app, "series auto-color from the map", LINES,
             [voice = "On the right, six series in one colormap scope. Each line takes the next color from the map, so a family of related series stays consistent with no per-series color set."])
-        let t_lines = ref_time_ticks()
+        let t_lines = record_frame_count(app)
         var lsnap = snapshot(app)
         move_to(app, plot_center(lsnap, lines), 900)
         wait_for_mouse_idle(app)
         record_check_rendered(app, LINES, true)
-        hold_remainder(d_lines, t_lines)
+        hold_remainder_content(app, d_lines, t_lines)
     }
 }
