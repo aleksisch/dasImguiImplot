@@ -52,6 +52,139 @@ def public with_subplots(title : string; rows : int; cols : int; size : float2;
     }
 }
 
+// Begin a group of axis-aligned plots, run the body if it began, always End it.
+def public with_aligned_plots(group_id : string; blk : block) {
+    if (BeginAlignedPlots(group_id, true)) {
+        invoke(blk)
+        EndAlignedPlots()
+    }
+}
+def public with_aligned_plots(group_id : string; vertical : bool; blk : block) {
+    if (BeginAlignedPlots(group_id, vertical)) {
+        invoke(blk)
+        EndAlignedPlots()
+    }
+}
+
+// ===== Style scopes (Push/Pop — always balanced) =====
+
+// Push a colormap for the body; auto-colored items + heatmaps inside sample from it.
+def public with_colormap(cmap : ImPlotColormap; blk : block) {
+    PushColormap(cmap)
+    invoke(blk)
+    PopColormap(1)
+}
+
+// Push one ImPlotCol color override (e.g. ImPlotCol.Line) for the body.
+def public with_style_color(idx : ImPlotCol; col : float4; blk : block) {
+    PushStyleColor(idx, col)
+    invoke(blk)
+    PopStyleColor(1)
+}
+
+// Push one ImPlotStyleVar override for the body — float / int / float2 forms.
+def public with_style_var(idx : ImPlotStyleVar; value : float; blk : block) {
+    PushStyleVar(idx, value)
+    invoke(blk)
+    PopStyleVar(1)
+}
+def public with_style_var(idx : ImPlotStyleVar; value : int; blk : block) {
+    PushStyleVar(idx, value)
+    invoke(blk)
+    PopStyleVar(1)
+}
+def public with_style_var(idx : ImPlotStyleVar; value : float2; blk : block) {
+    PushStyleVar(idx, value)
+    invoke(blk)
+    PopStyleVar(1)
+}
+
+// Clip drawing to the plot area (optionally expanded by `expand` px) for the body.
+def public with_plot_clip_rect(blk : block) {
+    PushPlotClipRect(0.0f)
+    invoke(blk)
+    PopPlotClipRect()
+}
+def public with_plot_clip_rect(expand : float; blk : block) {
+    PushPlotClipRect(expand)
+    invoke(blk)
+    PopPlotClipRect()
+}
+
+// ===== Popup & drag-and-drop scopes (body runs iff Begin succeeded) =====
+
+// A legend popup (default right mouse button); body emits its contents.
+def public with_legend_popup(label_id : string; blk : block) {
+    if (BeginLegendPopup(label_id, 1)) {
+        invoke(blk)
+        EndLegendPopup()
+    }
+}
+def public with_legend_popup(label_id : string; mouse_button : int; blk : block) {
+    if (BeginLegendPopup(label_id, mouse_button)) {
+        invoke(blk)
+        EndLegendPopup()
+    }
+}
+
+// Drag-drop SOURCE on the last item / the whole plot / an axis.
+def public with_drag_drop_source_item(label_id : string; blk : block) {
+    if (BeginDragDropSourceItem(label_id, 0)) {
+        invoke(blk)
+        EndDragDropSource()
+    }
+}
+def public with_drag_drop_source_item(label_id : string; flags : int; blk : block) {
+    if (BeginDragDropSourceItem(label_id, flags)) {
+        invoke(blk)
+        EndDragDropSource()
+    }
+}
+def public with_drag_drop_source_plot(blk : block) {
+    if (BeginDragDropSourcePlot(0)) {
+        invoke(blk)
+        EndDragDropSource()
+    }
+}
+def public with_drag_drop_source_plot(flags : int; blk : block) {
+    if (BeginDragDropSourcePlot(flags)) {
+        invoke(blk)
+        EndDragDropSource()
+    }
+}
+def public with_drag_drop_source_axis(axis : ImAxis; blk : block) {
+    if (BeginDragDropSourceAxis(axis, 0)) {
+        invoke(blk)
+        EndDragDropSource()
+    }
+}
+def public with_drag_drop_source_axis(axis : ImAxis; flags : int; blk : block) {
+    if (BeginDragDropSourceAxis(axis, flags)) {
+        invoke(blk)
+        EndDragDropSource()
+    }
+}
+
+// Drag-drop TARGET on the whole plot / an axis / the legend.
+def public with_drag_drop_target_plot(blk : block) {
+    if (BeginDragDropTargetPlot()) {
+        invoke(blk)
+        EndDragDropTarget()
+    }
+}
+def public with_drag_drop_target_axis(axis : ImAxis; blk : block) {
+    if (BeginDragDropTargetAxis(axis)) {
+        invoke(blk)
+        EndDragDropTarget()
+    }
+}
+def public with_drag_drop_target_legend(blk : block) {
+    if (BeginDragDropTargetLegend()) {
+        invoke(blk)
+        EndDragDropTarget()
+    }
+}
+
 // ===== Axis setup =====
 
 def public setup_axes(x_label : string; y_label : string) {
