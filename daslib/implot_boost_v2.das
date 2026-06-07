@@ -80,8 +80,10 @@ let private LEGEND_LABEL_RETRY_FRAMES = 240   // bounded window to resolve a jus
 
 def private capture_legend(var state : PlotScopeState; title : string) {
     // Read the plot's legend into the snapshot AFTER EndPlot, by title — the rect / shown are
-    // written during EndPlot's legend render, so GetPlot(title) gives current-frame values. Labels
-    // come from ImPlot as a fresh string per call, so we cache them (rebuild only when the entry set
+    // written during EndPlot's legend render, so GetPlot(title) gives current-frame values.
+    // LegendEntryLabel returns a das-heap-owned copy (it allocateString's into our context — see
+    // the C++ forwarder, issue #9), so the cached label stays valid even after ImPlot resets its
+    // internal Legend.Labels buffer next frame. We cache labels (rebuild only when the entry set
     // changes) rather than re-allocating every frame. Rects / shown are cheap scalars, refreshed
     // every frame. (A relabel with no count change reads stale — exotic for a steady plot.)
     let n = LegendEntryCount(title)
