@@ -36,6 +36,17 @@ Source: ``examples/tutorial/bar_groups_and_pie.das``.
    :language: das
    :linenos:
 
+Walkthrough
+===========
+
+.. video:: bar_groups_and_pie.mp4
+
+The recording tours both charts and exercises the grouped bars' legend with real
+synthetic input: clicking a series in the legend hides it across **every group at
+once** — the whole ``industrial`` color drops out of all four quarters — and a second
+click brings it back. It self-verifies that the series' ``shown`` flag flips both ways
+and that both plots render, so a no-op toggle or a missing chart fails at teardown.
+
 Bar groups
 ==========================
 
