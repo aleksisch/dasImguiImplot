@@ -22,7 +22,7 @@ annotation uses.
            let mp = GetPlotMousePos(ImAxis.X1, ImAxis.Y1)   // data coords
            g_cursor_x[0] = mp.x
            plot_inf_lines("cursor", g_cursor_x)             // vertical crosshair
-           plot_text("({mp.x}, {mp.y})", mp.x, mp.y, float2(10.0f, 10.0f))
+           plot_text("({mp.x:.1f}, {mp.y:.2f})", mp.x, mp.y, float2(10.0f, 10.0f))
        }
    }
 
@@ -31,6 +31,17 @@ Source: ``examples/tutorial/query_and_hover.das``.
 .. literalinclude:: ../../../examples/tutorial/query_and_hover.das
    :language: das
    :linenos:
+
+Walkthrough
+===========
+
+.. video:: query_and_hover.mp4
+
+The recording glides the cursor across the plot with real synthetic input: the
+vertical crosshair and the ``(x, y)`` label track it every frame, and ImPlot's
+corner mouse readout updates alongside. It self-verifies that ``hovered`` flips true
+and ``GetPlotMousePos`` resolves into the band the cursor was aimed at — left, then
+right — so a dead hover or a frozen readout fails at teardown.
 
 Live query
 ==========
@@ -47,7 +58,9 @@ Annotating the cursor
 here a one-element array reused each frame for the crosshair (kept as a global to
 avoid a per-frame allocation). ``plot_text(text, x, y, pix_offset)`` anchors a label
 at a data point, offset by screen pixels so it sits beside the cursor rather than
-under it.
+under it. The label uses ``fmt`` precision specifiers in the interpolation —
+``{mp.x:.1f}`` / ``{mp.y:.2f}`` — so it reads ``(74.0, -0.19)`` instead of full
+double precision.
 
 Testing the hover
 =================
