@@ -62,15 +62,6 @@ def double_click(app : ImguiApp; pt : tuple<float; float>) {
     wait_for_mouse_idle(app)
 }
 
-// Hold a beat's caption for the remainder of its voice dwell, measuring real elapsed
-// work (gesture + verify) so the next say_begin can't fire early and overlap the voice.
-def hold_remainder(dwell : uint; t0 : int64) {
-    let elapsed = uint(get_time_usec(t0) / 1000)
-    if (dwell > elapsed) {
-        sleep(dwell - elapsed)
-    }
-}
-
 [export]
 def main {
     with_implot_recording_app("examples/tutorial/line_plot.das", "line_plot.apng", 50) $(app) {
@@ -93,35 +84,35 @@ def main {
         let before_pan = field_json(snapshot(app), PLOT, "x_max")
         let d_pan = say_begin(app, "drag to pan", PLOT,
             [voice = "Hold the left button inside the plot and drag to pan. The whole view slides with the cursor."])
-        let t_pan = ref_time_ticks()
-        sleep(LEAD_MS)
+        let t_pan = record_frame_count(app)
+        hold_content(app, LEAD_MS)
         pan_drag(app, center, left)
         record_check_changed(app, PLOT, "x_max", before_pan)
-        hold_remainder(d_pan, t_pan)
+        hold_remainder_content(app, d_pan, t_pan)
 
         // ---- Beat 3: zoom (scroll wheel) ----
         let before_zoom = field_json(snapshot(app), PLOT, "x_max")
         let d_zoom = say_begin(app, "scroll to zoom", PLOT,
             [voice = "Scroll the wheel over the plot to zoom. It zooms in around the cursor, toward the data under it."])
-        let t_zoom = ref_time_ticks()
-        sleep(LEAD_MS)
+        let t_zoom = record_frame_count(app)
+        hold_content(app, LEAD_MS)
         move_to(app, center, 300)
         wait_for_mouse_idle(app)
         for (_b in range(3)) {
             scroll_zoom(app, 2)
-            sleep(260u)
+            hold_content(app, 260u)
         }
         record_check_changed(app, PLOT, "x_max", before_zoom)
-        hold_remainder(d_zoom, t_zoom)
+        hold_remainder_content(app, d_zoom, t_zoom)
 
         // ---- Beat 4: fit (double click) ----
         let before_fit = field_json(snapshot(app), PLOT, "x_max")
         let d_fit = say_begin(app, "double click to fit", PLOT,
             [voice = "Double click anywhere in the plot to fit the axes back to the data. One gesture resets the view."])
-        let t_fit = ref_time_ticks()
-        sleep(LEAD_MS)
+        let t_fit = record_frame_count(app)
+        hold_content(app, LEAD_MS)
         double_click(app, center)
         record_check_changed(app, PLOT, "x_max", before_fit)
-        hold_remainder(d_fit, t_fit)
+        hold_remainder_content(app, d_fit, t_fit)
     }
 }

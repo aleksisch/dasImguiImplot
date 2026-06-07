@@ -23,15 +23,6 @@ let PLOT = "PLOT_WIN/CHART"
 let LEAD_MS = 800u
 let HOLD_TOL = 1.0lf   // an untouched axis' range must not drift more than this (data units)
 
-// Hold a beat's caption for the remainder of its voice dwell, measuring real elapsed
-// work (gesture + verify) so the next say_begin can't fire early and overlap the voice.
-def hold_remainder(dwell : uint; t0 : int64) {
-    let elapsed = uint(get_time_usec(t0) / 1000)
-    if (dwell > elapsed) {
-        sleep(dwell - elapsed)
-    }
-}
-
 [export]
 def main {
     with_implot_recording_app("examples/tutorial/multi_axes.das", "multi_axes.apng", 45) $(app) {
@@ -56,15 +47,15 @@ def main {
         let b2_y2 = plot_axis_limit(b2, s, "y2_max")
         let d_left = say_begin(app, "drag the left axis to pan temperature alone", PLOT,
             [voice = "Grab the left temperature axis and drag it. Only temperature pans. Pressure on the right does not move."])
-        let t_left = ref_time_ticks()
-        sleep(LEAD_MS)
+        let t_left = record_frame_count(app)
+        hold_content(app, LEAD_MS)
         drag_axis(s, ImAxis.Y1, -110.0f)
         var dleft = wait_for_axis_limit_changed(s, "y_max", b2_y1)
         record_check(app, "temperature (Y1) panned by the left-axis drag", dleft != null)
         // Held-steady check on the SAME frame the pan was detected (dleft), not a later snapshot.
         record_check(app, "pressure (Y2) held steady while Y1 dragged",
                      abs(plot_axis_limit(dleft, s, "y2_max") - b2_y2) < HOLD_TOL)
-        hold_remainder(d_left, t_left)
+        hold_remainder_content(app, d_left, t_left)
 
         // ---- Beat 3: drag the RIGHT axis (pressure / Y2) ----
         var b3 = snapshot(app)
@@ -72,13 +63,13 @@ def main {
         let b3_y2 = plot_axis_limit(b3, s, "y2_max")
         let d_right = say_begin(app, "drag the right axis to pan pressure alone", PLOT,
             [voice = "Now the right pressure axis. Drag it, and only pressure pans. Temperature on the left stays put. Each axis moves on its own."])
-        let t_right = ref_time_ticks()
-        sleep(LEAD_MS)
+        let t_right = record_frame_count(app)
+        hold_content(app, LEAD_MS)
         drag_axis(s, ImAxis.Y2, 120.0f)
         var dright = wait_for_axis_limit_changed(s, "y2_max", b3_y2)
         record_check(app, "pressure (Y2) panned by the right-axis drag", dright != null)
         record_check(app, "temperature (Y1) held steady while Y2 dragged",
                      abs(plot_axis_limit(dright, s, "y_max") - b3_y1) < HOLD_TOL)
-        hold_remainder(d_right, t_right)
+        hold_remainder_content(app, d_right, t_right)
     }
 }

@@ -22,15 +22,6 @@ let PIE = "PLOT_WIN/PIE"
 let SERIES = "industrial"
 let LEAD_MS = 800u
 
-// Hold a beat's caption for the remainder of its voice dwell, measuring real elapsed
-// work (gesture + verify) so the next say_begin can't fire early and overlap the voice.
-def hold_remainder(dwell : uint; t0 : int64) {
-    let elapsed = uint(get_time_usec(t0) / 1000)
-    if (dwell > elapsed) {
-        sleep(dwell - elapsed)
-    }
-}
-
 [export]
 def main {
     with_implot_recording_app("examples/tutorial/bar_groups_and_pie.das", "bar_groups_and_pie.apng", 45) $(app) {
@@ -52,25 +43,25 @@ def main {
         // ---- Beat 2: legend toggle on the grouped bars (hide across all groups, then restore) ----
         let d_leg = say_begin(app, "toggle a series in the legend", BARS,
             [voice = "Each cluster shares one legend. Click a series to hide it across every group at once, then click again to bring it back."])
-        let t_leg = ref_time_ticks()
-        sleep(LEAD_MS)
+        let t_leg = record_frame_count(app)
+        hold_content(app, LEAD_MS)
         legend_toggle(bars, SERIES)
         record_check(app, "{SERIES} hidden across all groups after the legend click",
                      wait_for_series_shown(bars, SERIES, false) != null)
-        sleep(900u)   // dwell so the whole-series-gone state reads before restoring
+        hold_content(app, 900u)   // dwell so the whole-series-gone state reads before restoring
         legend_toggle(bars, SERIES)
         record_check(app, "{SERIES} restored after the second click",
                      wait_for_series_shown(bars, SERIES, true) != null)
-        hold_remainder(d_leg, t_leg)
+        hold_remainder_content(app, d_leg, t_leg)
 
         // ---- Beat 3: the pie chart ----
         let d_pie = say_begin(app, "a pie splits the whole", PIE,
             [voice = "The pie chart splits a single whole into slices, each labelled with its share as a percentage. A different shape from the same simple call."])
-        let t_pie = ref_time_ticks()
+        let t_pie = record_frame_count(app)
         var psnap = snapshot(app)
         move_to(app, plot_center(psnap, pie), 900)
         wait_for_mouse_idle(app)
         record_check_rendered(app, PIE, true)
-        hold_remainder(d_pie, t_pie)
+        hold_remainder_content(app, d_pie, t_pie)
     }
 }

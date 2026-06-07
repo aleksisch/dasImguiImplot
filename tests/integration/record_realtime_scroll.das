@@ -5,7 +5,6 @@ options no_unused_function_arguments = false
 
 require imgui/imgui_implot_app public
 require imgui/imgui_implot_playwright public
-require implot
 require daslib/json public
 require daslib/json_boost public
 
@@ -18,16 +17,6 @@ require daslib/json_boost public
 
 let SCROLL = "PLOT_WIN/SCROLL"
 let SCROLL_MARGIN = 2.0lf   // x_min must advance at least this far over the narration (data units)
-
-// Hold a beat's caption for the remainder of its voice dwell, measuring real elapsed
-// work so the next say_begin can't fire early and overlap the voice. For this tutorial the
-// hold doubles as the observation window: the plot keeps streaming while the caption holds.
-def hold_remainder(dwell : uint; t0 : int64) {
-    let elapsed = uint(get_time_usec(t0) / 1000)
-    if (dwell > elapsed) {
-        sleep(dwell - elapsed)
-    }
-}
 
 [export]
 def main {
@@ -52,8 +41,8 @@ def main {
         let x0 = plot_axis_limits(snapshot(app), s).x_min
         let d_scroll = say_begin(app, "the window scrolls with time", SCROLL,
             [voice = "Watch it scroll. As time advances the window slides to the right. New samples push in on the right while the oldest ones drop off the left."])
-        let t_scroll = ref_time_ticks()
-        hold_remainder(d_scroll, t_scroll)
+        let t_scroll = record_frame_count(app)
+        hold_remainder_content(app, d_scroll, t_scroll)
         let x1 = plot_axis_limits(snapshot(app), s).x_min
         record_check(app, "x window scrolled forward (x_min advanced over the narration)",
                      x1 > x0 + SCROLL_MARGIN)
