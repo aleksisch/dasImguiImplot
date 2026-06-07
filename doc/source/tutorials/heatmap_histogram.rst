@@ -27,6 +27,21 @@ Source: ``examples/tutorial/heatmap_histogram.das``.
    :language: das
    :linenos:
 
+Walkthrough
+===========
+
+.. video:: heatmap_histogram.mp4
+
+A guided tour of the two statistical items. The cursor sweeps diagonally across the
+heatmap — each cell takes its color from its value through the active colormap, so
+the structure in the data shows up as a pattern of colors — then glides to the
+histogram, which bins a flat sample array into bars whose shape is the distribution.
+There is no interaction to teach beyond the shapes; the recording self-verifies that
+both plots render *and* that the synthetic cursor genuinely lands hovered over the
+grid, so a dead frame or a missed cursor fails at teardown. A *sequential* colormap
+that runs a smooth ramp — the natural fit for a heatmap — is shown in
+:ref:`colormaps and style <tutorial_implot_colormaps_and_style>`.
+
 Heatmaps
 ========
 
