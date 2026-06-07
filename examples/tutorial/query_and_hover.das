@@ -6,6 +6,7 @@ require imgui/imgui_widgets_builtin
 require imgui/imgui_implot_boost_v2
 require implot
 require math
+require strings
 
 // =============================================================================
 // TUTORIAL: query_and_hover — read the cursor's plot position live and annotate it.
@@ -58,7 +59,7 @@ def update() {
                 g_cursor_x[0] = mp.x
                 next_line_style(float4(1.00f, 1.00f, 1.00f, 0.50f), 1.0f)
                 plot_inf_lines("cursor", g_cursor_x)
-                plot_text("({mp.x}, {mp.y})", mp.x, mp.y, float2(10.0f, 10.0f))
+                plot_text("({mp.x:.1f}, {mp.y:.2f})", mp.x, mp.y, float2(10.0f, 10.0f))
             }
         }
     }
