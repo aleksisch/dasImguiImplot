@@ -29,6 +29,18 @@ Source: ``examples/tutorial/drag_tools.das``.
    :language: das
    :linenos:
 
+Walkthrough
+===========
+
+.. video:: drag_tools.mp4
+
+The recording drives each handle with real synthetic input and self-verifies the
+bound value moved. The yellow point follows the cursor in ``x`` and ``y``; the green
+threshold line slides along ``x``; and the magenta region shows its **two modes** —
+grab the body (near the center) to move the whole rectangle, with all four bounds
+travelling together, or grab a **corner** to resize it, where only that corner moves.
+A missed grab or a frozen handle fails the recording at teardown.
+
 Persistent state
 ================
 
