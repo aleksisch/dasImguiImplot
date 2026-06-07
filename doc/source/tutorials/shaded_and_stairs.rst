@@ -27,6 +27,18 @@ Source: ``examples/tutorial/shaded_and_stairs.das``.
    :language: das
    :linenos:
 
+Walkthrough
+===========
+
+.. video:: shaded_and_stairs.mp4
+
+A guided tour of the filled-area items. The cursor traces the confidence band
+left to right — the fill widens toward the right, the way an interval grows — then
+drops to the step plot below, where ``plot_stairs`` holds each sample and
+``plot_shaded`` fills the area beneath the steps down to the baseline. There is no
+interaction to teach beyond the shapes; the recording self-verifies that both
+plots render at every beat, so a dead frame or a missing chart fails at teardown.
+
 Bands between two series
 ========================
 
