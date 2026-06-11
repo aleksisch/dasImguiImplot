@@ -314,7 +314,7 @@ void Module_dasIMPLOT::initMain () {
     // mirrors dasImguiNodeEditor's initMain fixup.
     for ( auto & pfn : this->functions.each() ) {
         for ( auto & arg : pfn->arguments ) {
-            if ( arg->type->constant && arg->type->ref && arg->type->dim.size()==0 ) {
+            if ( arg->type->constant && arg->type->ref && !arg->type->isArray() ) {
                 if ( arg->type->baseType==Type::tFloat2 || arg->type->baseType==Type::tFloat4 ) {
                     arg->type->ref = false;
                 }
