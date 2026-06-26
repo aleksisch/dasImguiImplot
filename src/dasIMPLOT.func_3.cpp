@@ -62,7 +62,7 @@ void Module_dasIMPLOT::initFunctions_3() {
 	makeExtern< void (*)() , ImPlot::SetNextAxesToFit , SimNode_ExtFuncCall , implotTempFn>(lib,"SetNextAxesToFit","ImPlot::SetNextAxesToFit")
 		->addToModule(*this, SideEffects::worstDefault);
 // from implot.h:912:17
-	makeExtern< void (*)(const char *,void *,const ImPlotPoint &,const ImPlotPoint &,const ImVec2 &,const ImVec2 &,const ImVec4 &,int) , ImPlot::PlotImage , SimNode_ExtFuncCall , implotTempFn>(lib,"PlotImage","ImPlot::PlotImage")
+	makeExtern< void (*)(const char *,ImTextureID,const ImPlotPoint &,const ImPlotPoint &,const ImVec2 &,const ImVec2 &,const ImVec4 &,int) , ImPlot::PlotImage , SimNode_ExtFuncCall , implotTempFn>(lib,"PlotImage","ImPlot::PlotImage")
 		->args({"label_id","user_texture_id","bounds_min","bounds_max","uv0","uv1","tint_col","flags"})
 		->arg_type(7,makeType<ImPlotImageFlags_>(lib))
 		->arg_init(7,new ExprConstEnumeration(0,makeType<ImPlotImageFlags_>(lib)))

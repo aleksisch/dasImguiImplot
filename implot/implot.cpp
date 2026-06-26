@@ -348,11 +348,11 @@ void AddTextVertical(ImDrawList *DrawList, ImVec2 pos, ImU32 col, const char *te
     if (!text_end)
         text_end = text_begin + strlen(text_begin);
     ImGuiContext& g = *GImGui;
-    ImFont* font = g.Font;
+    ImFontBaked* baked = g.FontBaked;
     // Align to be pixel perfect
     pos.x = IM_FLOOR(pos.x);
     pos.y = IM_FLOOR(pos.y);
-    const float scale = g.FontSize / font->FontSize;
+    const float scale = g.FontSize / baked->Size;
     const char* s = text_begin;
     int chars_exp = (int)(text_end - s);
     int chars_rnd = 0;
@@ -369,7 +369,7 @@ void AddTextVertical(ImDrawList *DrawList, ImVec2 pos, ImU32 col, const char *te
             if (c == 0) // Malformed UTF-8?
                 break;
         }
-        const ImFontGlyph * glyph = font->FindGlyph((ImWchar)c);
+        const ImFontGlyph * glyph = baked->FindGlyph((ImWchar)c);
         if (glyph == nullptr) {
             continue;
         }
@@ -4913,8 +4913,8 @@ void ShowStyleEditor(ImPlotStyle* ref) {
             filter.Draw("Filter colors", ImGui::GetFontSize() * 16);
 
             static ImGuiColorEditFlags alpha_flags = ImGuiColorEditFlags_AlphaPreviewHalf;
-            if (ImGui::RadioButton("Opaque", alpha_flags == ImGuiColorEditFlags_None))             { alpha_flags = ImGuiColorEditFlags_None; } ImGui::SameLine();
-            if (ImGui::RadioButton("Alpha",  alpha_flags == ImGuiColorEditFlags_AlphaPreview))     { alpha_flags = ImGuiColorEditFlags_AlphaPreview; } ImGui::SameLine();
+            if (ImGui::RadioButton("Opaque", alpha_flags == ImGuiColorEditFlags_AlphaOpaque))      { alpha_flags = ImGuiColorEditFlags_AlphaOpaque; } ImGui::SameLine();
+            if (ImGui::RadioButton("Alpha",  alpha_flags == ImGuiColorEditFlags_None))             { alpha_flags = ImGuiColorEditFlags_None; } ImGui::SameLine();
             if (ImGui::RadioButton("Both",   alpha_flags == ImGuiColorEditFlags_AlphaPreviewHalf)) { alpha_flags = ImGuiColorEditFlags_AlphaPreviewHalf; } ImGui::SameLine();
             HelpMarker(
                 "In the color list:\n"

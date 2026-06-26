@@ -7,7 +7,7 @@ public:
 	Enumeration_ImAxis_() : das::Enumeration("ImAxis") {
 		external = true;
 		cppName = "ImAxis_";
-		baseType = (das::Type) das::ToBasicType<int>::type;
+		baseType = (das::Type) das::ToBasicType<unsigned int>::type;
 		addIEx("X1", "ImAxis_X1", int64_t(ImAxis_::ImAxis_X1), das::LineInfo());
 		addIEx("X2", "ImAxis_X2", int64_t(ImAxis_::ImAxis_X2), das::LineInfo());
 		addIEx("X3", "ImAxis_X3", int64_t(ImAxis_::ImAxis_X3), das::LineInfo());
@@ -24,7 +24,7 @@ public:
 	Enumeration_ImPlotFlags_() : das::Enumeration("ImPlotFlags") {
 		external = true;
 		cppName = "ImPlotFlags_";
-		baseType = (das::Type) das::ToBasicType<int>::type;
+		baseType = (das::Type) das::ToBasicType<unsigned int>::type;
 		addIEx("None", "ImPlotFlags_None", int64_t(ImPlotFlags_::ImPlotFlags_None), das::LineInfo());
 		addIEx("NoTitle", "ImPlotFlags_NoTitle", int64_t(ImPlotFlags_::ImPlotFlags_NoTitle), das::LineInfo());
 		addIEx("NoLegend", "ImPlotFlags_NoLegend", int64_t(ImPlotFlags_::ImPlotFlags_NoLegend), das::LineInfo());
@@ -46,7 +46,7 @@ public:
 	Enumeration_ImPlotAxisFlags_() : das::Enumeration("ImPlotAxisFlags") {
 		external = true;
 		cppName = "ImPlotAxisFlags_";
-		baseType = (das::Type) das::ToBasicType<int>::type;
+		baseType = (das::Type) das::ToBasicType<unsigned int>::type;
 		addIEx("None", "ImPlotAxisFlags_None", int64_t(ImPlotAxisFlags_::ImPlotAxisFlags_None), das::LineInfo());
 		addIEx("NoLabel", "ImPlotAxisFlags_NoLabel", int64_t(ImPlotAxisFlags_::ImPlotAxisFlags_NoLabel), das::LineInfo());
 		addIEx("NoGridLines", "ImPlotAxisFlags_NoGridLines", int64_t(ImPlotAxisFlags_::ImPlotAxisFlags_NoGridLines), das::LineInfo());
@@ -76,7 +76,7 @@ public:
 	Enumeration_ImPlotSubplotFlags_() : das::Enumeration("ImPlotSubplotFlags") {
 		external = true;
 		cppName = "ImPlotSubplotFlags_";
-		baseType = (das::Type) das::ToBasicType<int>::type;
+		baseType = (das::Type) das::ToBasicType<unsigned int>::type;
 		addIEx("None", "ImPlotSubplotFlags_None", int64_t(ImPlotSubplotFlags_::ImPlotSubplotFlags_None), das::LineInfo());
 		addIEx("NoTitle", "ImPlotSubplotFlags_NoTitle", int64_t(ImPlotSubplotFlags_::ImPlotSubplotFlags_NoTitle), das::LineInfo());
 		addIEx("NoLegend", "ImPlotSubplotFlags_NoLegend", int64_t(ImPlotSubplotFlags_::ImPlotSubplotFlags_NoLegend), das::LineInfo());
@@ -98,7 +98,7 @@ public:
 	Enumeration_ImPlotLegendFlags_() : das::Enumeration("ImPlotLegendFlags") {
 		external = true;
 		cppName = "ImPlotLegendFlags_";
-		baseType = (das::Type) das::ToBasicType<int>::type;
+		baseType = (das::Type) das::ToBasicType<unsigned int>::type;
 		addIEx("None", "ImPlotLegendFlags_None", int64_t(ImPlotLegendFlags_::ImPlotLegendFlags_None), das::LineInfo());
 		addIEx("NoButtons", "ImPlotLegendFlags_NoButtons", int64_t(ImPlotLegendFlags_::ImPlotLegendFlags_NoButtons), das::LineInfo());
 		addIEx("NoHighlightItem", "ImPlotLegendFlags_NoHighlightItem", int64_t(ImPlotLegendFlags_::ImPlotLegendFlags_NoHighlightItem), das::LineInfo());
@@ -116,7 +116,7 @@ public:
 	Enumeration_ImPlotMouseTextFlags_() : das::Enumeration("ImPlotMouseTextFlags") {
 		external = true;
 		cppName = "ImPlotMouseTextFlags_";
-		baseType = (das::Type) das::ToBasicType<int>::type;
+		baseType = (das::Type) das::ToBasicType<unsigned int>::type;
 		addIEx("None", "ImPlotMouseTextFlags_None", int64_t(ImPlotMouseTextFlags_::ImPlotMouseTextFlags_None), das::LineInfo());
 		addIEx("NoAuxAxes", "ImPlotMouseTextFlags_NoAuxAxes", int64_t(ImPlotMouseTextFlags_::ImPlotMouseTextFlags_NoAuxAxes), das::LineInfo());
 		addIEx("NoFormat", "ImPlotMouseTextFlags_NoFormat", int64_t(ImPlotMouseTextFlags_::ImPlotMouseTextFlags_NoFormat), das::LineInfo());
@@ -130,7 +130,7 @@ public:
 	Enumeration_ImPlotDragToolFlags_() : das::Enumeration("ImPlotDragToolFlags") {
 		external = true;
 		cppName = "ImPlotDragToolFlags_";
-		baseType = (das::Type) das::ToBasicType<int>::type;
+		baseType = (das::Type) das::ToBasicType<unsigned int>::type;
 		addIEx("None", "ImPlotDragToolFlags_None", int64_t(ImPlotDragToolFlags_::ImPlotDragToolFlags_None), das::LineInfo());
 		addIEx("NoCursors", "ImPlotDragToolFlags_NoCursors", int64_t(ImPlotDragToolFlags_::ImPlotDragToolFlags_NoCursors), das::LineInfo());
 		addIEx("NoFit", "ImPlotDragToolFlags_NoFit", int64_t(ImPlotDragToolFlags_::ImPlotDragToolFlags_NoFit), das::LineInfo());
@@ -145,7 +145,7 @@ public:
 	Enumeration_ImPlotColormapScaleFlags_() : das::Enumeration("ImPlotColormapScaleFlags") {
 		external = true;
 		cppName = "ImPlotColormapScaleFlags_";
-		baseType = (das::Type) das::ToBasicType<int>::type;
+		baseType = (das::Type) das::ToBasicType<unsigned int>::type;
 		addIEx("None", "ImPlotColormapScaleFlags_None", int64_t(ImPlotColormapScaleFlags_::ImPlotColormapScaleFlags_None), das::LineInfo());
 		addIEx("NoLabel", "ImPlotColormapScaleFlags_NoLabel", int64_t(ImPlotColormapScaleFlags_::ImPlotColormapScaleFlags_NoLabel), das::LineInfo());
 		addIEx("Opposite", "ImPlotColormapScaleFlags_Opposite", int64_t(ImPlotColormapScaleFlags_::ImPlotColormapScaleFlags_Opposite), das::LineInfo());
@@ -159,7 +159,7 @@ public:
 	Enumeration_ImPlotItemFlags_() : das::Enumeration("ImPlotItemFlags") {
 		external = true;
 		cppName = "ImPlotItemFlags_";
-		baseType = (das::Type) das::ToBasicType<int>::type;
+		baseType = (das::Type) das::ToBasicType<unsigned int>::type;
 		addIEx("None", "ImPlotItemFlags_None", int64_t(ImPlotItemFlags_::ImPlotItemFlags_None), das::LineInfo());
 		addIEx("NoLegend", "ImPlotItemFlags_NoLegend", int64_t(ImPlotItemFlags_::ImPlotItemFlags_NoLegend), das::LineInfo());
 		addIEx("NoFit", "ImPlotItemFlags_NoFit", int64_t(ImPlotItemFlags_::ImPlotItemFlags_NoFit), das::LineInfo());
@@ -172,7 +172,7 @@ public:
 	Enumeration_ImPlotLineFlags_() : das::Enumeration("ImPlotLineFlags") {
 		external = true;
 		cppName = "ImPlotLineFlags_";
-		baseType = (das::Type) das::ToBasicType<int>::type;
+		baseType = (das::Type) das::ToBasicType<unsigned int>::type;
 		addIEx("None", "ImPlotLineFlags_None", int64_t(ImPlotLineFlags_::ImPlotLineFlags_None), das::LineInfo());
 		addIEx("Segments", "ImPlotLineFlags_Segments", int64_t(ImPlotLineFlags_::ImPlotLineFlags_Segments), das::LineInfo());
 		addIEx("Loop", "ImPlotLineFlags_Loop", int64_t(ImPlotLineFlags_::ImPlotLineFlags_Loop), das::LineInfo());
@@ -188,7 +188,7 @@ public:
 	Enumeration_ImPlotScatterFlags_() : das::Enumeration("ImPlotScatterFlags") {
 		external = true;
 		cppName = "ImPlotScatterFlags_";
-		baseType = (das::Type) das::ToBasicType<int>::type;
+		baseType = (das::Type) das::ToBasicType<unsigned int>::type;
 		addIEx("None", "ImPlotScatterFlags_None", int64_t(ImPlotScatterFlags_::ImPlotScatterFlags_None), das::LineInfo());
 		addIEx("NoClip", "ImPlotScatterFlags_NoClip", int64_t(ImPlotScatterFlags_::ImPlotScatterFlags_NoClip), das::LineInfo());
 	}
@@ -200,7 +200,7 @@ public:
 	Enumeration_ImPlotStairsFlags_() : das::Enumeration("ImPlotStairsFlags") {
 		external = true;
 		cppName = "ImPlotStairsFlags_";
-		baseType = (das::Type) das::ToBasicType<int>::type;
+		baseType = (das::Type) das::ToBasicType<unsigned int>::type;
 		addIEx("None", "ImPlotStairsFlags_None", int64_t(ImPlotStairsFlags_::ImPlotStairsFlags_None), das::LineInfo());
 		addIEx("PreStep", "ImPlotStairsFlags_PreStep", int64_t(ImPlotStairsFlags_::ImPlotStairsFlags_PreStep), das::LineInfo());
 		addIEx("Shaded", "ImPlotStairsFlags_Shaded", int64_t(ImPlotStairsFlags_::ImPlotStairsFlags_Shaded), das::LineInfo());
@@ -213,7 +213,7 @@ public:
 	Enumeration_ImPlotShadedFlags_() : das::Enumeration("ImPlotShadedFlags") {
 		external = true;
 		cppName = "ImPlotShadedFlags_";
-		baseType = (das::Type) das::ToBasicType<int>::type;
+		baseType = (das::Type) das::ToBasicType<unsigned int>::type;
 		addIEx("None", "ImPlotShadedFlags_None", int64_t(ImPlotShadedFlags_::ImPlotShadedFlags_None), das::LineInfo());
 	}
 };
@@ -224,7 +224,7 @@ public:
 	Enumeration_ImPlotBarsFlags_() : das::Enumeration("ImPlotBarsFlags") {
 		external = true;
 		cppName = "ImPlotBarsFlags_";
-		baseType = (das::Type) das::ToBasicType<int>::type;
+		baseType = (das::Type) das::ToBasicType<unsigned int>::type;
 		addIEx("None", "ImPlotBarsFlags_None", int64_t(ImPlotBarsFlags_::ImPlotBarsFlags_None), das::LineInfo());
 		addIEx("Horizontal", "ImPlotBarsFlags_Horizontal", int64_t(ImPlotBarsFlags_::ImPlotBarsFlags_Horizontal), das::LineInfo());
 	}
@@ -236,7 +236,7 @@ public:
 	Enumeration_ImPlotBarGroupsFlags_() : das::Enumeration("ImPlotBarGroupsFlags") {
 		external = true;
 		cppName = "ImPlotBarGroupsFlags_";
-		baseType = (das::Type) das::ToBasicType<int>::type;
+		baseType = (das::Type) das::ToBasicType<unsigned int>::type;
 		addIEx("None", "ImPlotBarGroupsFlags_None", int64_t(ImPlotBarGroupsFlags_::ImPlotBarGroupsFlags_None), das::LineInfo());
 		addIEx("Horizontal", "ImPlotBarGroupsFlags_Horizontal", int64_t(ImPlotBarGroupsFlags_::ImPlotBarGroupsFlags_Horizontal), das::LineInfo());
 		addIEx("Stacked", "ImPlotBarGroupsFlags_Stacked", int64_t(ImPlotBarGroupsFlags_::ImPlotBarGroupsFlags_Stacked), das::LineInfo());
@@ -249,7 +249,7 @@ public:
 	Enumeration_ImPlotErrorBarsFlags_() : das::Enumeration("ImPlotErrorBarsFlags") {
 		external = true;
 		cppName = "ImPlotErrorBarsFlags_";
-		baseType = (das::Type) das::ToBasicType<int>::type;
+		baseType = (das::Type) das::ToBasicType<unsigned int>::type;
 		addIEx("None", "ImPlotErrorBarsFlags_None", int64_t(ImPlotErrorBarsFlags_::ImPlotErrorBarsFlags_None), das::LineInfo());
 		addIEx("Horizontal", "ImPlotErrorBarsFlags_Horizontal", int64_t(ImPlotErrorBarsFlags_::ImPlotErrorBarsFlags_Horizontal), das::LineInfo());
 	}
@@ -261,7 +261,7 @@ public:
 	Enumeration_ImPlotStemsFlags_() : das::Enumeration("ImPlotStemsFlags") {
 		external = true;
 		cppName = "ImPlotStemsFlags_";
-		baseType = (das::Type) das::ToBasicType<int>::type;
+		baseType = (das::Type) das::ToBasicType<unsigned int>::type;
 		addIEx("None", "ImPlotStemsFlags_None", int64_t(ImPlotStemsFlags_::ImPlotStemsFlags_None), das::LineInfo());
 		addIEx("Horizontal", "ImPlotStemsFlags_Horizontal", int64_t(ImPlotStemsFlags_::ImPlotStemsFlags_Horizontal), das::LineInfo());
 	}
@@ -273,7 +273,7 @@ public:
 	Enumeration_ImPlotInfLinesFlags_() : das::Enumeration("ImPlotInfLinesFlags") {
 		external = true;
 		cppName = "ImPlotInfLinesFlags_";
-		baseType = (das::Type) das::ToBasicType<int>::type;
+		baseType = (das::Type) das::ToBasicType<unsigned int>::type;
 		addIEx("None", "ImPlotInfLinesFlags_None", int64_t(ImPlotInfLinesFlags_::ImPlotInfLinesFlags_None), das::LineInfo());
 		addIEx("Horizontal", "ImPlotInfLinesFlags_Horizontal", int64_t(ImPlotInfLinesFlags_::ImPlotInfLinesFlags_Horizontal), das::LineInfo());
 	}
@@ -285,7 +285,7 @@ public:
 	Enumeration_ImPlotPieChartFlags_() : das::Enumeration("ImPlotPieChartFlags") {
 		external = true;
 		cppName = "ImPlotPieChartFlags_";
-		baseType = (das::Type) das::ToBasicType<int>::type;
+		baseType = (das::Type) das::ToBasicType<unsigned int>::type;
 		addIEx("None", "ImPlotPieChartFlags_None", int64_t(ImPlotPieChartFlags_::ImPlotPieChartFlags_None), das::LineInfo());
 		addIEx("Normalize", "ImPlotPieChartFlags_Normalize", int64_t(ImPlotPieChartFlags_::ImPlotPieChartFlags_Normalize), das::LineInfo());
 	}
@@ -297,7 +297,7 @@ public:
 	Enumeration_ImPlotHeatmapFlags_() : das::Enumeration("ImPlotHeatmapFlags") {
 		external = true;
 		cppName = "ImPlotHeatmapFlags_";
-		baseType = (das::Type) das::ToBasicType<int>::type;
+		baseType = (das::Type) das::ToBasicType<unsigned int>::type;
 		addIEx("None", "ImPlotHeatmapFlags_None", int64_t(ImPlotHeatmapFlags_::ImPlotHeatmapFlags_None), das::LineInfo());
 		addIEx("ColMajor", "ImPlotHeatmapFlags_ColMajor", int64_t(ImPlotHeatmapFlags_::ImPlotHeatmapFlags_ColMajor), das::LineInfo());
 	}
@@ -309,7 +309,7 @@ public:
 	Enumeration_ImPlotHistogramFlags_() : das::Enumeration("ImPlotHistogramFlags") {
 		external = true;
 		cppName = "ImPlotHistogramFlags_";
-		baseType = (das::Type) das::ToBasicType<int>::type;
+		baseType = (das::Type) das::ToBasicType<unsigned int>::type;
 		addIEx("None", "ImPlotHistogramFlags_None", int64_t(ImPlotHistogramFlags_::ImPlotHistogramFlags_None), das::LineInfo());
 		addIEx("Horizontal", "ImPlotHistogramFlags_Horizontal", int64_t(ImPlotHistogramFlags_::ImPlotHistogramFlags_Horizontal), das::LineInfo());
 		addIEx("Cumulative", "ImPlotHistogramFlags_Cumulative", int64_t(ImPlotHistogramFlags_::ImPlotHistogramFlags_Cumulative), das::LineInfo());
@@ -325,7 +325,7 @@ public:
 	Enumeration_ImPlotDigitalFlags_() : das::Enumeration("ImPlotDigitalFlags") {
 		external = true;
 		cppName = "ImPlotDigitalFlags_";
-		baseType = (das::Type) das::ToBasicType<int>::type;
+		baseType = (das::Type) das::ToBasicType<unsigned int>::type;
 		addIEx("None", "ImPlotDigitalFlags_None", int64_t(ImPlotDigitalFlags_::ImPlotDigitalFlags_None), das::LineInfo());
 	}
 };
@@ -336,7 +336,7 @@ public:
 	Enumeration_ImPlotImageFlags_() : das::Enumeration("ImPlotImageFlags") {
 		external = true;
 		cppName = "ImPlotImageFlags_";
-		baseType = (das::Type) das::ToBasicType<int>::type;
+		baseType = (das::Type) das::ToBasicType<unsigned int>::type;
 		addIEx("None", "ImPlotImageFlags_None", int64_t(ImPlotImageFlags_::ImPlotImageFlags_None), das::LineInfo());
 	}
 };
@@ -347,7 +347,7 @@ public:
 	Enumeration_ImPlotTextFlags_() : das::Enumeration("ImPlotTextFlags") {
 		external = true;
 		cppName = "ImPlotTextFlags_";
-		baseType = (das::Type) das::ToBasicType<int>::type;
+		baseType = (das::Type) das::ToBasicType<unsigned int>::type;
 		addIEx("None", "ImPlotTextFlags_None", int64_t(ImPlotTextFlags_::ImPlotTextFlags_None), das::LineInfo());
 		addIEx("Vertical", "ImPlotTextFlags_Vertical", int64_t(ImPlotTextFlags_::ImPlotTextFlags_Vertical), das::LineInfo());
 	}
@@ -359,7 +359,7 @@ public:
 	Enumeration_ImPlotDummyFlags_() : das::Enumeration("ImPlotDummyFlags") {
 		external = true;
 		cppName = "ImPlotDummyFlags_";
-		baseType = (das::Type) das::ToBasicType<int>::type;
+		baseType = (das::Type) das::ToBasicType<unsigned int>::type;
 		addIEx("None", "ImPlotDummyFlags_None", int64_t(ImPlotDummyFlags_::ImPlotDummyFlags_None), das::LineInfo());
 	}
 };
@@ -370,7 +370,7 @@ public:
 	Enumeration_ImPlotCond_() : das::Enumeration("ImPlotCond") {
 		external = true;
 		cppName = "ImPlotCond_";
-		baseType = (das::Type) das::ToBasicType<int>::type;
+		baseType = (das::Type) das::ToBasicType<unsigned int>::type;
 		addIEx("None", "ImPlotCond_None", int64_t(ImPlotCond_::ImPlotCond_None), das::LineInfo());
 		addIEx("Always", "ImPlotCond_Always", int64_t(ImPlotCond_::ImPlotCond_Always), das::LineInfo());
 		addIEx("Once", "ImPlotCond_Once", int64_t(ImPlotCond_::ImPlotCond_Once), das::LineInfo());
@@ -383,7 +383,7 @@ public:
 	Enumeration_ImPlotCol_() : das::Enumeration("ImPlotCol") {
 		external = true;
 		cppName = "ImPlotCol_";
-		baseType = (das::Type) das::ToBasicType<int>::type;
+		baseType = (das::Type) das::ToBasicType<unsigned int>::type;
 		addIEx("Line", "ImPlotCol_Line", int64_t(ImPlotCol_::ImPlotCol_Line), das::LineInfo());
 		addIEx("Fill", "ImPlotCol_Fill", int64_t(ImPlotCol_::ImPlotCol_Fill), das::LineInfo());
 		addIEx("MarkerOutline", "ImPlotCol_MarkerOutline", int64_t(ImPlotCol_::ImPlotCol_MarkerOutline), das::LineInfo());
@@ -415,7 +415,7 @@ public:
 	Enumeration_ImPlotStyleVar_() : das::Enumeration("ImPlotStyleVar") {
 		external = true;
 		cppName = "ImPlotStyleVar_";
-		baseType = (das::Type) das::ToBasicType<int>::type;
+		baseType = (das::Type) das::ToBasicType<unsigned int>::type;
 		addIEx("LineWeight", "ImPlotStyleVar_LineWeight", int64_t(ImPlotStyleVar_::ImPlotStyleVar_LineWeight), das::LineInfo());
 		addIEx("Marker", "ImPlotStyleVar_Marker", int64_t(ImPlotStyleVar_::ImPlotStyleVar_Marker), das::LineInfo());
 		addIEx("MarkerSize", "ImPlotStyleVar_MarkerSize", int64_t(ImPlotStyleVar_::ImPlotStyleVar_MarkerSize), das::LineInfo());
@@ -453,7 +453,7 @@ public:
 	Enumeration_ImPlotScale_() : das::Enumeration("ImPlotScale") {
 		external = true;
 		cppName = "ImPlotScale_";
-		baseType = (das::Type) das::ToBasicType<int>::type;
+		baseType = (das::Type) das::ToBasicType<unsigned int>::type;
 		addIEx("Linear", "ImPlotScale_Linear", int64_t(ImPlotScale_::ImPlotScale_Linear), das::LineInfo());
 		addIEx("Time", "ImPlotScale_Time", int64_t(ImPlotScale_::ImPlotScale_Time), das::LineInfo());
 		addIEx("Log10", "ImPlotScale_Log10", int64_t(ImPlotScale_::ImPlotScale_Log10), das::LineInfo());
@@ -489,7 +489,7 @@ public:
 	Enumeration_ImPlotColormap_() : das::Enumeration("ImPlotColormap") {
 		external = true;
 		cppName = "ImPlotColormap_";
-		baseType = (das::Type) das::ToBasicType<int>::type;
+		baseType = (das::Type) das::ToBasicType<unsigned int>::type;
 		addIEx("Deep", "ImPlotColormap_Deep", int64_t(ImPlotColormap_::ImPlotColormap_Deep), das::LineInfo());
 		addIEx("Dark", "ImPlotColormap_Dark", int64_t(ImPlotColormap_::ImPlotColormap_Dark), das::LineInfo());
 		addIEx("Pastel", "ImPlotColormap_Pastel", int64_t(ImPlotColormap_::ImPlotColormap_Pastel), das::LineInfo());
@@ -515,7 +515,7 @@ public:
 	Enumeration_ImPlotLocation_() : das::Enumeration("ImPlotLocation") {
 		external = true;
 		cppName = "ImPlotLocation_";
-		baseType = (das::Type) das::ToBasicType<int>::type;
+		baseType = (das::Type) das::ToBasicType<unsigned int>::type;
 		addIEx("Center", "ImPlotLocation_Center", int64_t(ImPlotLocation_::ImPlotLocation_Center), das::LineInfo());
 		addIEx("North", "ImPlotLocation_North", int64_t(ImPlotLocation_::ImPlotLocation_North), das::LineInfo());
 		addIEx("South", "ImPlotLocation_South", int64_t(ImPlotLocation_::ImPlotLocation_South), das::LineInfo());
