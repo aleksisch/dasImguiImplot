@@ -85,13 +85,11 @@ IF(COMMAND ADD_MODULE_CPP)
         ADD_MODULE_DAS(imgui daslib ${_n})
     ENDFOREACH()
 
-    IF(EMSCRIPTEN)
-        ADD_DAS_STATIC_MODULE_LIB(libDasModuleImplot ${DAS_IMPLOT_BIND_SRC} ${DAS_IMPLOT_SRC})
-        SET(_dasImguiImplot_targets libDasModuleImplot)
-    ELSE()
-        ADD_MODULE_LIB(libDasModuleImplot dasModuleImplot ${DAS_IMPLOT_BIND_SRC} ${DAS_IMPLOT_SRC})
-        SET(_dasImguiImplot_targets libDasModuleImplot dasModuleImplot)
-    ENDIF()
+    # static half only -- no ADD_MODULE_LIB shared twin: in a superbuild the DLL
+    # flavor comes from this module's own standalone build, and the twin would need
+    # the dllexport/dllimport matrix against dasImgui for nothing a host ever loads
+    ADD_DAS_STATIC_MODULE_LIB(libDasModuleImplot ${DAS_IMPLOT_BIND_SRC} ${DAS_IMPLOT_SRC})
+    SET(_dasImguiImplot_targets libDasModuleImplot)
     FOREACH(_t ${_dasImguiImplot_targets})
         TARGET_INCLUDE_DIRECTORIES(${_t} PRIVATE
             ${imgui_INCLUDE_DIR}
@@ -104,9 +102,6 @@ IF(COMMAND ADD_MODULE_CPP)
     ENDFOREACH()
     # imgui core symbols come from dasImgui's libs
     TARGET_LINK_LIBRARIES(libDasModuleImplot PUBLIC libDasModuleImgui)
-    IF(NOT EMSCRIPTEN)
-        TARGET_LINK_LIBRARIES(dasModuleImplot PUBLIC dasModuleImgui)
-    ENDIF()
 ELSE()
 IF(WIN32)
     SET(IMGUI_IMPORT_ATTR "__declspec\(dllimport\)")
