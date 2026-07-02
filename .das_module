@@ -6,9 +6,9 @@ def initialize(project_path : string) {
     if (das_is_dll_build()) {
         register_dynamic_module("{project_path}/dasModuleImplot.shared_module", "Module_dasIMPLOT")
     }
-    register_native_path("imgui", "imgui_implot_boost", "{project_path}/daslib/implot_boost.das")
-    register_native_path("imgui", "imgui_implot_boost_v2", "{project_path}/daslib/implot_boost_v2.das")
-    register_native_path("imgui", "imgui_implot_app", "{project_path}/daslib/implot_app.das")
-    register_native_path("imgui", "imgui_implot_playwright", "{project_path}/daslib/implot_playwright.das")
+    register_native_path("imgui", "imgui_implot_boost", "{project_path}/daslib/imgui_implot_boost.das")
+    register_native_path("imgui", "imgui_implot_boost_v2", "{project_path}/daslib/imgui_implot_boost_v2.das")
+    register_native_path("imgui", "imgui_implot_app", "{project_path}/daslib/imgui_implot_app.das")
+    register_native_path("imgui", "imgui_implot_playwright", "{project_path}/daslib/imgui_implot_playwright.das")
     // theme wrapper module is registered here when added.
 }

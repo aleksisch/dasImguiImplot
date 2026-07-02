@@ -1,12 +1,33 @@
-cmake_minimum_required(VERSION 3.16)
-project(dasImguiImplot CXX C)
+# dasImguiImplot builds two ways from a single CMakeLists:
+#  - included from a daslang superbuild (the ADD_MODULE_* macros exist): the module
+#    links statically into the host app via the convention path (dasImgui provides
+#    imgui headers + the libDasModuleImgui target) -- how an embedding app and the
+#    fat-man static-link example consume it.
+#  - configured directly (top-level project, DASLANG_DIR set): the standalone
+#    .shared_module build CI, the daspkg index, and -load_module consumers run on.
+IF(NOT COMMAND ADD_MODULE_CPP)
+    cmake_minimum_required(VERSION 3.16)
+    project(dasImguiImplot CXX C)
+ENDIF()
 
-# DASLANG_DIR must point to the daslang SDK root
-if(NOT DEFINED DASLANG_DIR)
-    message(FATAL_ERROR "DASLANG_DIR must be set to the daslang SDK root")
-endif()
+IF((NOT DAS_IMPLOT_INCLUDED) AND ((NOT ${DAS_IMPLOT_DISABLED}) OR (NOT DEFINED DAS_IMPLOT_DISABLED)))
+SET(DAS_IMPLOT_INCLUDED TRUE)
+MESSAGE(STATUS "dasImguiImplot module included.")
 
 SET(DAS_IMPLOT_DIR ${CMAKE_CURRENT_LIST_DIR})
+
+IF(COMMAND ADD_MODULE_CPP)
+    # superbuild: dasImgui's CMakeLists (included earlier -- the modules glob is
+    # alphabetical) already set imgui_INCLUDE_DIR and created libDasModuleImgui
+    IF(NOT DEFINED imgui_INCLUDE_DIR)
+        MESSAGE(FATAL_ERROR "dasImguiImplot superbuild: dasImgui must be included first (imgui_INCLUDE_DIR unset)")
+    ENDIF()
+    SET(DAS_IMGUI_DIR ${CMAKE_CURRENT_LIST_DIR}/../dasImgui)
+ELSE()
+    # DASLANG_DIR must point to the daslang SDK root
+    if(NOT DEFINED DASLANG_DIR)
+        message(FATAL_ERROR "DASLANG_DIR must be set to the daslang SDK root")
+    endif()
 
 # Locate dasImgui (sibling module under same modules/ parent)
 get_filename_component(MODULES_DIR "${DAS_IMPLOT_DIR}" DIRECTORY)
@@ -29,6 +50,7 @@ if(WIN32)
         message(FATAL_ERROR "dasModuleImgui.lib not found at ${DAS_IMGUI_DIR}/. Build dasImgui first.")
     endif()
 endif()
+ENDIF()
 
 # ImPlot v0.16 (vendored, patched for imgui 1.90.6 compatibility)
 SET(IMPLOT_INCLUDE_DIR ${DAS_IMPLOT_DIR}/implot)
@@ -51,6 +73,41 @@ SET(DAS_IMPLOT_BIND_SRC
     ${DAS_IMPLOT_FUNC_SRC}
 )
 
+
+IF(COMMAND ADD_MODULE_CPP)
+    # ===== daslang superbuild: static-embed =====
+    # `require imgui/<name>` -> modules/dasImguiImplot/daslib/<name>.das; the glob IS the
+    # .das_module register_native_path list (file stem == module name throughout).
+    ADD_MODULE_CPP(dasIMPLOT)
+    FILE(GLOB _dasImguiImplot_das_files "${DAS_IMPLOT_DIR}/daslib/*.das")
+    FOREACH(_f ${_dasImguiImplot_das_files})
+        GET_FILENAME_COMPONENT(_n "${_f}" NAME_WE)
+        ADD_MODULE_DAS(imgui daslib ${_n})
+    ENDFOREACH()
+
+    IF(EMSCRIPTEN)
+        ADD_DAS_STATIC_MODULE_LIB(libDasModuleImplot ${DAS_IMPLOT_BIND_SRC} ${DAS_IMPLOT_SRC})
+        SET(_dasImguiImplot_targets libDasModuleImplot)
+    ELSE()
+        ADD_MODULE_LIB(libDasModuleImplot dasModuleImplot ${DAS_IMPLOT_BIND_SRC} ${DAS_IMPLOT_SRC})
+        SET(_dasImguiImplot_targets libDasModuleImplot dasModuleImplot)
+    ENDIF()
+    FOREACH(_t ${_dasImguiImplot_targets})
+        TARGET_INCLUDE_DIRECTORIES(${_t} PRIVATE
+            ${imgui_INCLUDE_DIR}
+            ${IMPLOT_INCLUDE_DIR}
+            ${DAS_IMGUI_DIR}/src
+            ${DAS_IMPLOT_DIR}/src
+        )
+        TARGET_COMPILE_DEFINITIONS(${_t} PRIVATE IMGUI_DISABLE_OBSOLETE_FUNCTIONS=1)
+        SETUP_CPP11(${_t})
+    ENDFOREACH()
+    # imgui core symbols come from dasImgui's libs
+    TARGET_LINK_LIBRARIES(libDasModuleImplot PUBLIC libDasModuleImgui)
+    IF(NOT EMSCRIPTEN)
+        TARGET_LINK_LIBRARIES(dasModuleImplot PUBLIC dasModuleImgui)
+    ENDIF()
+ELSE()
 IF(WIN32)
     SET(IMGUI_IMPORT_ATTR "__declspec\(dllimport\)")
 ELSE()
@@ -123,3 +180,6 @@ set_target_properties(dasModuleImplot PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY_RELEASE "${DAS_IMPLOT_DIR}"
     LIBRARY_OUTPUT_DIRECTORY "${DAS_IMPLOT_DIR}"
 )
+ENDIF() # superbuild / standalone
+
+ENDIF() # DAS_IMPLOT_INCLUDED guard
