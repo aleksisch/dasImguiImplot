@@ -1,4 +1,5 @@
 options gen2
+options _comment_hygiene = true
 options indenting = 4
 
 module imgui_implot_app public
@@ -20,12 +21,9 @@ def private implot_module_root() : string {
 
 def public with_implot_app(feature_path : string;
                            body : block<(app : ImguiApp) : void>) {
-    //! Spawn `daslang-live` against an implot feature with BOTH the dasImgui and
-    //! dasImguiImplot modules loaded, run `body` while alive, then shut down. Thin
-    //! wrapper over `with_imgui_app`: passes the implot module as an extra
-    //! `-load_module` (dasImgui is always loaded by with_imgui_app, and the implot
-    //! module requires it, so it must follow) and resolves the
-    //! `modules/dasImguiImplot/` feature prefix under the implot root.
+    //! Spawn `daslang-live` against an implot feature with BOTH dasImgui and
+    //! dasImguiImplot loaded, run `body` while alive, then shut down. The implot module
+    //! is an extra `-load_module` and MUST follow dasImgui, which it requires.
     let root = implot_module_root()
     with_imgui_app(feature_path, [root], root, "modules/dasImguiImplot/", body)
 }
@@ -34,10 +32,9 @@ def public with_implot_recording_app(feature_path : string;
                                      output_apng_basename : string;
                                      max_seconds : int;
                                      body : block<(app : ImguiApp) : void>) {
-    //! Native-fps recording session against an implot tutorial feature (the common
-    //! case). Delegates to the fps overload — gen2's trailing-block sugar can't see
-    //! through a default parameter between the last positional and the block, so the
-    //! overload pair keeps call sites clean.
+    //! Native-fps recording session against an implot tutorial feature. A separate
+    //! overload rather than a default `fps`, because gen2's trailing-block sugar can't
+    //! see through a default parameter between the last positional and the block.
     with_implot_recording_app(feature_path, output_apng_basename, max_seconds, RECORD_FPS, body)
 }
 
@@ -47,9 +44,8 @@ def public with_implot_recording_app(feature_path : string;
                                      fps : int;
                                      body : block<(app : ImguiApp) : void>) {
     //! Record an `.apng` of an implot feature with BOTH dasImgui and dasImguiImplot
-    //! loaded — the recording counterpart of `with_implot_app`. Threads the implot
-    //! module as an extra `-load_module`, resolves a relative `feature_path` under the
-    //! implot root, and roots the `.apng` asset dir there too.
+    //! loaded — the recording counterpart of `with_implot_app`. Relative `feature_path`
+    //! and the `.apng` asset dir both resolve under the implot root.
     let root = implot_module_root()
     with_recording_app(feature_path, output_apng_basename, max_seconds, fps,
                        [root], root, root, body)

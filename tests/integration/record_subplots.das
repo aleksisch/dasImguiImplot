@@ -1,4 +1,5 @@
 options gen2
+options _comment_hygiene = true
 options indenting = 4
 options no_unused_block_arguments = false
 options no_unused_function_arguments = false
@@ -23,10 +24,9 @@ let COS = "PLOT_WIN/GRID/P_COS"
 let LEAD_MS = 800u
 let HOLD_TOL = 0.5lf   // a non-boxed cell's range must not drift more than this (data units)
 
-// Box-select zoom is a RIGHT-button drag (ImPlot's default Select binding): press inside the
-// cell, drag a box, release -> the cell zooms to the box. Walk a few waypoints so the rubber
-// band is visible on screen. Unlike a pan, the box is press-corner to release-corner (not
-// io.MouseDelta integrated), but the waypoints make it read as a deliberate drag.
+// Box-select zoom is a RIGHT-button drag (ImPlot's default Select binding): press inside the cell,
+// drag a box, release -> the cell zooms to the box. Unlike a pan the box is press-corner to
+// release-corner, not io.MouseDelta integrated; the waypoints just make the rubber band visible.
 def box_zoom(app : ImguiApp; from_pt : tuple<float; float>; to_pt : tuple<float; float>) {
     let steps = 5
     let dur = 130

@@ -1,4 +1,5 @@
 options gen2
+options _comment_hygiene = true
 options indenting = 4
 options no_unused_block_arguments = false
 options no_unused_function_arguments = false
@@ -77,26 +78,26 @@ def public with_colormap(cmap : ImPlotColormap; blk : block) {
 
 // Push one ImPlotCol color override (e.g. ImPlotCol.Line) for the body.
 def public with_style_color(idx : ImPlotCol; col : float4; blk : block) {
-    PushStyleColor(idx, col)
+    implot::PushStyleColor(idx, col)
     invoke(blk)
-    PopStyleColor(1)
+    implot::PopStyleColor(1)
 }
 
 // Push one ImPlotStyleVar override for the body — float / int / float2 forms.
 def public with_style_var(idx : ImPlotStyleVar; value : float; blk : block) {
-    PushStyleVar(idx, value)
+    implot::PushStyleVar(idx, value)
     invoke(blk)
-    PopStyleVar(1)
+    implot::PopStyleVar(1)
 }
 def public with_style_var(idx : ImPlotStyleVar; value : int; blk : block) {
-    PushStyleVar(idx, value)
+    implot::PushStyleVar(idx, value)
     invoke(blk)
-    PopStyleVar(1)
+    implot::PopStyleVar(1)
 }
 def public with_style_var(idx : ImPlotStyleVar; value : float2; blk : block) {
-    PushStyleVar(idx, value)
+    implot::PushStyleVar(idx, value)
     invoke(blk)
-    PopStyleVar(1)
+    implot::PopStyleVar(1)
 }
 
 // Clip drawing to the plot area (optionally expanded by `expand` px) for the body.
@@ -131,37 +132,37 @@ def public with_legend_popup(label_id : string; mouse_button : int; blk : block)
 def public with_drag_drop_source_item(label_id : string; blk : block) {
     if (BeginDragDropSourceItem(label_id)) {   // native default flags = 0
         invoke(blk)
-        EndDragDropSource()
+        implot::EndDragDropSource()
     }
 }
 def public with_drag_drop_source_item(label_id : string; flags : int; blk : block) {
     if (BeginDragDropSourceItem(label_id, flags)) {
         invoke(blk)
-        EndDragDropSource()
+        implot::EndDragDropSource()
     }
 }
 def public with_drag_drop_source_plot(blk : block) {
     if (BeginDragDropSourcePlot()) {   // native default flags = 0
         invoke(blk)
-        EndDragDropSource()
+        implot::EndDragDropSource()
     }
 }
 def public with_drag_drop_source_plot(flags : int; blk : block) {
     if (BeginDragDropSourcePlot(flags)) {
         invoke(blk)
-        EndDragDropSource()
+        implot::EndDragDropSource()
     }
 }
 def public with_drag_drop_source_axis(axis : ImAxis; blk : block) {
     if (BeginDragDropSourceAxis(axis)) {   // native default flags = 0
         invoke(blk)
-        EndDragDropSource()
+        implot::EndDragDropSource()
     }
 }
 def public with_drag_drop_source_axis(axis : ImAxis; flags : int; blk : block) {
     if (BeginDragDropSourceAxis(axis, flags)) {
         invoke(blk)
-        EndDragDropSource()
+        implot::EndDragDropSource()
     }
 }
 
@@ -169,19 +170,19 @@ def public with_drag_drop_source_axis(axis : ImAxis; flags : int; blk : block) {
 def public with_drag_drop_target_plot(blk : block) {
     if (BeginDragDropTargetPlot()) {
         invoke(blk)
-        EndDragDropTarget()
+        implot::EndDragDropTarget()
     }
 }
 def public with_drag_drop_target_axis(axis : ImAxis; blk : block) {
     if (BeginDragDropTargetAxis(axis)) {
         invoke(blk)
-        EndDragDropTarget()
+        implot::EndDragDropTarget()
     }
 }
 def public with_drag_drop_target_legend(blk : block) {
     if (BeginDragDropTargetLegend()) {
         invoke(blk)
-        EndDragDropTarget()
+        implot::EndDragDropTarget()
     }
 }
 

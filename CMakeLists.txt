@@ -117,6 +117,9 @@ target_compile_definitions(dasModuleImplot PRIVATE
     IMGUI_DISABLE_OBSOLETE_FUNCTIONS=1
     IMPLOT_DISABLE_OBSOLETE_FUNCTIONS=1
     IMGUI_API=${IMGUI_IMPORT_ATTR}
+    # Must match dasImgui's ImWchar width, or ImWchar-taking imgui symbols mangle as
+    # unsigned short here and unsigned int there, and the link fails on FindGlyph.
+    IMGUI_USE_WCHAR32=1
     $<$<CONFIG:Release>:DAS_NO_ASSERTIONS>
     $<$<CONFIG:MinSizeRel>:DAS_NO_ASSERTIONS>
     $<$<CONFIG:RelWithDebInfo>:DAS_NO_ASSERTIONS>

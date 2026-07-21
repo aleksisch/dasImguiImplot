@@ -1,4 +1,5 @@
 options gen2
+options _comment_hygiene = true
 options indenting = 4
 options no_unused_block_arguments = false
 options no_unused_function_arguments = false
@@ -36,9 +37,8 @@ def private finalize_state(widget_ident : string; kind : string; var state : aut
 
 struct LegendEntry {
     //! One legend entry of a `plot` scope, captured per frame into `PlotScopeState.legend`.
-    //! Lets a test / recording target a synthetic legend-toggle click (`legend_toggle`) at the
-    //! exact rect ImPlot hit-tests, and verify the series hid / showed (`shown`). The rect is
-    //! screen-space pixels `[x0,y0]`–`[x1,y1]`; entries are in legend (submission) order.
+    //! Lets a test target a synthetic `legend_toggle` click at the exact rect ImPlot hit-tests
+    //! and verify the series hid / showed. Screen-space px, in legend (submission) order.
     series : string                 //! series label (the `label_id` passed to plot_line / etc.); `label` is a reserved word
     shown : bool                    //! series currently visible (false after a legend-toggle hide)
     hovered : bool                  //! legend entry is hovered this frame (sync gate for a synthetic toggle click)
@@ -49,11 +49,9 @@ struct LegendEntry {
 }
 
 struct PlotScopeState {
-    //! Per-frame snapshot of a `plot` scope, pasted into the widget's snapshot
-    //! payload by `stateless_finalize`. Geometry is screen-space pixels;
-    //! limits / mouse are in plot DATA coordinates. Everything but `visible` is
-    //! captured between BeginPlot/EndPlot — the only window where ImPlot's query
-    //! functions are valid — so the fields are absent on a clipped/collapsed plot.
+    //! Per-frame snapshot of a `plot` scope, pasted into the widget's snapshot payload by
+    //! `stateless_finalize`. Geometry is screen-space px; limits / mouse are plot DATA coords.
+    //! All but `visible` is captured between BeginPlot/EndPlot, ImPlot's only valid query window.
     @optional pos : float2          //! plot area top-left, screen px
     @optional plot_size : float2    //! plot area size, screen px
     @optional x_min : double        //! X axis lower limit (data coords)
@@ -72,20 +70,16 @@ struct PlotScopeState {
     @optional mouse_x : double      //! GetPlotMousePos().x (data coords)
     @optional mouse_y : double      //! GetPlotMousePos().y
     @optional legend_retries : int  //! internal: frames left to re-read not-yet-resolved legend labels
-    visible : bool                  //! BeginPlot returned true (plot drew this frame)
+    visible : bool                  //! BeginPlot returned true; when false the captured fields above are absent
     legend : array<LegendEntry>     //! per-series legend entries (label / shown / clickable rect), legend order; empty when not visible
 }
 
 let private LEGEND_LABEL_RETRY_FRAMES = 240   // bounded window to resolve a just-registered item's label
 
+// Read the legend AFTER EndPlot, by title: rect / shown are written during EndPlot's legend render.
+// LegendEntryLabel returns a das-heap-owned copy (issue #9), so cached labels survive ImPlot resetting
+// its Legend.Labels next frame; the cache is rebuilt only when the entry set size changes.
 def private capture_legend(var state : PlotScopeState; title : string) {
-    // Read the plot's legend into the snapshot AFTER EndPlot, by title — the rect / shown are
-    // written during EndPlot's legend render, so GetPlot(title) gives current-frame values.
-    // LegendEntryLabel returns a das-heap-owned copy (it allocateString's into our context — see
-    // the C++ forwarder, issue #9), so the cached label stays valid even after ImPlot resets its
-    // internal Legend.Labels buffer next frame. We cache labels (rebuild only when the entry set
-    // changes) rather than re-allocating every frame. Rects / shown are cheap scalars, refreshed
-    // every frame. (A relabel with no count change reads stale — exotic for a steady plot.)
     let n = LegendEntryCount(title)
     if (length(state.legend) != n) {
         state.legend |> clear()
@@ -95,10 +89,7 @@ def private capture_legend(var state : PlotScopeState; title : string) {
         }
         state.legend_retries = LEGEND_LABEL_RETRY_FRAMES
     }
-    // A newly-registered item reports into the legend (count / rect / show) a frame or two before
-    // ImPlot resolves its label, so the initial cache can hold "". Re-read empty labels for a bounded
-    // window after the entry set last changed, then stop — resolves the lag without per-frame string
-    // churn, and terminates even if a label were ever legitimately empty (a hidden "##id").
+    // ImPlot resolves a new item's label a frame or two after its legend slot, so re-read empty ones.
     let resolving = state.legend_retries > 0
     for (i in range(n)) {
         let r = LegendEntryRect(title, i)
@@ -119,11 +110,9 @@ def private capture_legend(var state : PlotScopeState; title : string) {
 
 [container]
 def plot(var state : PlotScopeState; title : string; size : float2; flags : ImPlotFlags; blk : block) {
-    //! `BeginPlot(title, size, flags)` / `EndPlot()` — only-on-true pairing, so the
-    //! body and the state capture run iff the plot is visible. Registers as kind
-    //! "implot_plot"; the snapshot payload mirrors PlotState (geometry + axis limits
-    //! + hovered + mouse-plot-pos), captured in-scope where ImPlot's queries are valid.
-    //! Items submitted in the body nest under this plot's snapshot path.
+    //! `BeginPlot(title, size, flags)` / `EndPlot()` — only-on-true pairing, so the body and
+    //! the state capture run iff the plot is visible. Registers as kind "implot_plot" with a
+    //! PlotScopeState payload; items in the body nest under this plot's snapshot path.
     let im_open = BeginPlot(title, size, flags)
     state.visible = im_open
     var box = float4(0.0f, 0.0f, 0.0f, 0.0f)
@@ -252,7 +241,7 @@ def public set_axes(x_axis : ImAxis; y_axis : ImAxis) {
 }
 
 // ===== Next-item styling (SetNext*) =====
-//
+
 // Auto-sentinels mirror ImPlot's defaults: weight/size/alpha = -1 ("auto"),
 // color = float4(0,0,0,-1) (IMPLOT_AUTO_COL). Pass an explicit value to override.
 
@@ -290,7 +279,7 @@ def public next_axes_to_fit() {
 }
 
 // ===== Plot items (float | double | int) =====
-//
+
 // Single OR-typed wrappers over the type-overloaded native forwarders. The paired
 // x/y forms tie both arrays to one element type T (mixed-type x/y has no native
 // overload). `flags` is the per-item ImPlot*Flags as a bare int (all are typedef int).
@@ -440,9 +429,8 @@ def public plot_bar_groups(label_ids : array<string>;
                            item_count : int; group_count : int;
                            group_size : double = 0.67lf; shift : double = 0.0lf; flags : int = 0) {
     //! `PlotBarGroups(...)` — `item_count` series clustered into `group_count` groups.
-    //! `values` is a flat `item_count*group_count` row-major matrix (`values[item*group_count+group]`)
-    //! and `label_ids` names one series per row. The Stacked flag stacks within a group, Horizontal
-    //! flips the bars onto the y-axis.
+    //! `values` is a flat row-major `item_count*group_count` matrix (`values[item*group_count+group]`);
+    //! `label_ids` names one series per row. Stacked stacks within a group, Horizontal flips to y.
     PlotBarGroups(label_ids, values, item_count, group_count, group_size, shift, flags)
 }
 
@@ -457,15 +445,10 @@ def public plot_pie_chart(label_ids : array<string>;
 }
 
 // ===== Drag tools =====
-//
-// Interactive handles INSIDE a plot scope: the user drags them and their bound
-// value updates in place. Unlike the items above, a drag tool owns mutable state
-// (the value being dragged), so the caller passes a PERSISTENT state struct (a
-// global) — the wrapper mutates it through `addr` each frame and serializes it
-// into the snapshot under a path nested below the plot (`<plot>/<id>`), with a
-// bbox computed from the handle's DATA position via PlotToPixels (a drag tool
-// submits no normal ImGui item, so GetItemRect — what widget_finalize captures —
-// would be stale). That bbox is what a test/playwright synth-drags onto.
+
+// Interactive handles INSIDE a plot scope owning mutable state: the caller passes a PERSISTENT
+// (global) state struct, mutated each frame and serialized under `<plot>/<id>`. The bbox comes
+// from PlotToPixels(DATA pos) — a drag tool submits no ImGui item, so GetItemRect would be stale.
 
 struct DragPointState {
     //! A draggable (x,y) point handle. x/y are plot DATA coordinates and update in
@@ -572,12 +555,10 @@ def public pixels_to_plot(px : float2;
 }
 
 // ===== Colormaps =====
-//
-// A colormap maps a normalized t in [0,1] to a color. Push one (with_colormap /
-// push_colormap) and the auto-colored items + heatmaps inside it sample their colors
-// from it; colormap_scale draws the matching colorbar legend. `cmap` is the
-// ImPlotColormap enum (Deep / Viridis / Plasma / Jet / Greys / …) — passed straight
-// through (the binding exposes ImPlot's typedef-int colormap handle AS the enum).
+
+// A colormap maps normalized t in [0,1] to a color: push one (with_colormap / push_colormap) and
+// the auto-colored items + heatmaps inside sample from it; colormap_scale draws the colorbar.
+// `cmap` is ImPlotColormap (Deep / Viridis / …) — ImPlot's typedef-int handle exposed AS the enum.
 
 def public push_colormap(cmap : ImPlotColormap) {
     //! `PushColormap(cmap)` — make `cmap` the active colormap for subsequent items.
