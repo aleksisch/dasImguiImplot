@@ -1,4 +1,5 @@
 options gen2
+options _comment_hygiene = true
 options indenting = 4
 options no_unused_block_arguments = false
 options no_unused_function_arguments = false
@@ -36,9 +37,8 @@ def test_multi_axes(t : T?) {
         // Secondary-axis telemetry: Y2 (pressure) is captured, ranging ~[950,1050], independent of Y1.
         t |> success(abs(plot_axis_limit(m, s, "y2_max") - 1050.0lf) < 1.0lf, "Y2 (pressure) max captured ~1050")
         // The Y2-routed series' legend label resolves (the first-frame label fix). Poll, don't
-        // one-shot: ImPlot can resolve the label a few frames after the item first registers, so a
-        // read on the axis-convergence snapshot races it. Now runs on all platforms — issue #9 (the
-        // macOS empty/garbage label) is fixed in the LegendEntryLabel forwarder (returns an owned copy).
+        // one-shot: ImPlot can resolve the label a few frames after the item registers. Runs on all
+        // platforms — issue #9 (macOS empty/garbage label) is fixed in the LegendEntryLabel forwarder.
         t |> success(wait_for_series_shown(s, "pressure", true) != null, "pressure series present in legend (Y2 label captured)")
 
         // Drag ONLY the Y2 gutter: pressure's range must move while temp (Y1) and X1 stay put — the

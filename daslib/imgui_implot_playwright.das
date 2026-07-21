@@ -1,4 +1,5 @@
 options gen2
+options _comment_hygiene = true
 options indenting = 4
 
 module imgui_implot_playwright public
@@ -103,8 +104,7 @@ let private AXIS_GUTTER_PX = 18.0f   // into the tick-label strip just outside t
 let private AXIS_DRAG_STEPS = 6
 
 def private continuous_axis_drag(app : ImguiApp; from_pt : tuple<float; float>; to_pt : tuple<float; float>) {
-    // ImPlot integrates io.MouseDelta per frame, so a pan needs a CONTINUOUS multi-waypoint drag (a
-    // single from->to jump does not move the axis). Walk the cursor across waypoints, button held.
+    // ImPlot integrates io.MouseDelta per frame: a pan needs a CONTINUOUS multi-waypoint drag, and a single from->to jump does not move the axis.
     let dur = 120
     let endt = 120 + AXIS_DRAG_STEPS * dur
     var ev <- [
@@ -126,13 +126,9 @@ def private continuous_axis_drag(app : ImguiApp; from_pt : tuple<float; float>; 
 }
 
 def public drag_axis(s : PlotSession; axis : ImAxis; delta_px : float) {
-    //! Continuous drag along ONE axis's gutter (the tick-label strip just outside the data area),
-    //! panning ONLY that axis — the multi-axis "rescale just this one" gesture, distinct from a
-    //! plot-body pan (which moves every axis at once). Locates the gutter from the plot geometry
-    //! (pos / plot_size) in the snapshot: Y axes drag vertically by `delta_px`, X axes horizontally.
-    //! Supports the X1 / X2 / Y1 / Y2 gutters (primary + first auxiliary). Silent no-op when the plot
-    //! isn't visible or `axis` is unsupported — gate the effect with `wait_for_axis_limit_changed` /
-    //! `record_check_changed` on the axis's range field (e.g. "y2_max").
+    //! Continuous drag along ONE axis's gutter (the tick-label strip outside the data area), panning
+    //! ONLY that axis — unlike a plot-body pan, which moves every axis. `delta_px` is vertical for Y
+    //! axes, horizontal for X; X1/X2/Y1/Y2 only. No-op if not visible — gate with `wait_for_axis_limit_changed`.
     var snap = snapshot(s.app)
     let p = plot_payload(snap, s)
     return if (!(p?["visible"] ?? false))
@@ -154,11 +150,10 @@ def public drag_axis(s : PlotSession; axis : ImAxis; delta_px : float) {
 }
 
 // ===== drag-tool handles =====
-//
-// A drag tool registers under `<plot>/<id>` with the handle's screen bbox, so the
-// generic `drag(app, handle_path(s, id), dx, dy)` presses its center and drags it.
-// These readers pull the bound VALUE out of the handle's payload; `wait_for_point_moved`
-// gates a synthetic drag landing (value moved off its baseline) before asserting.
+
+// A drag tool registers under `<plot>/<id>` with the handle's screen bbox, so the generic
+// `drag(app, handle_path(s, id), dx, dy)` presses its center and drags it. These readers pull the
+// bound VALUE out of the payload; `wait_for_point_moved` gates a synthetic drag before asserting.
 
 def public handle_path(s : PlotSession; id : string) : string {
     //! Snapshot path of a drag handle declared as `<id>` inside this session's plot.
@@ -241,11 +236,10 @@ def public wait_for_hovered(s : PlotSession; expected : bool = true; max_frames 
 }
 
 // ===== legend entries =====
-//
+
 // The v2 `plot` scope serializes its per-series legend (label / shown / clickable rect) into
-// `payload.legend`. These helpers find an entry by series label so a test reads as intent
-// ("toggle the cos series, expect it hidden") and a recording drives a REAL synthetic click at
-// the exact rect ImPlot hit-tests — clicking a legend entry hides / shows that series.
+// `payload.legend`. These helpers find an entry by series label so a recording drives a REAL
+// synthetic click at the exact rect ImPlot hit-tests — clicking an entry hides / shows the series.
 
 struct LegendEntryView {
     found : bool          //! a legend entry with this label was present in the snapshot
@@ -285,12 +279,9 @@ def public series_shown(var snap : JsonValue?; s : PlotSession; series : string)
 }
 
 def public legend_toggle(s : PlotSession; series : string) {
-    //! Synthesize a REAL left-click on the `series` legend entry, toggling its visibility
-    //! (ImPlot hides / shows the series). Moves the cursor onto the entry, waits until it reports
-    //! hovered (so the press can't batch ahead of HoveredId — the windowed-vsync press-before-hover
-    //! race), then clicks in place and blocks until the gesture settles. Silently no-ops when the
-    //! entry is absent OR hover never registers — the caller MUST gate the effect with
-    //! `wait_for_series_shown`.
+    //! Synthesize a REAL left-click on the `series` legend entry, toggling its visibility. Waits for
+    //! the entry to report hovered before pressing, so the click can't batch ahead of HoveredId (the
+    //! windowed-vsync race). No-op if absent or never hovered — MUST gate on `wait_for_series_shown`.
     var snap = snapshot(s.app)
     let v = legend_entry(snap, s, series)
     return if (!v.found)
@@ -309,9 +300,8 @@ def public legend_toggle(s : PlotSession; series : string) {
 def public wait_for_legend_hover(s : PlotSession; series : string; expected : bool = true;
                                  max_frames : int = 300) : JsonValue? {
     //! Poll until the `series` legend entry's hover state equals `expected` — the sync gate for
-    //! `legend_toggle`: after `move_to` onto the entry, this confirms ImPlot registered the hover
-    //! before the press, so the click can't batch ahead of `HoveredId` (the windowed-vsync
-    //! press-before-hover race). Bounded; returns the matching snapshot or null on timeout.
+    //! `legend_toggle`: confirms ImPlot registered the hover before the press, so the click can't
+    //! batch ahead of `HoveredId`. Bounded; returns the matching snapshot or null on timeout.
     return wait_until(s.app, max_frames) $(var snap) {
         return legend_entry(snap, s, series).hovered == expected
     }
@@ -320,10 +310,8 @@ def public wait_for_legend_hover(s : PlotSession; series : string; expected : bo
 def public wait_for_series_shown(s : PlotSession; series : string; expected : bool;
                                  max_frames : int = 300) : JsonValue? {
     //! Poll until the `series`' legend entry is PRESENT and its visibility equals `expected` — the
-    //! gate for a `legend_toggle` actually landing. Requiring presence is deliberate: `series_shown`
-    //! reads false for both hidden AND absent, so gating on it alone would let "wait for hidden"
-    //! pass on a missing series (telemetry gone / wrong path) — a false-positive gate. Returns the
-    //! matching snapshot or null on timeout.
+    //! gate for a `legend_toggle` landing. Presence is required deliberately: `series_shown` reads
+    //! false for both hidden AND absent, so alone it would pass "wait for hidden" on a gone series.
     return wait_until(s.app, max_frames) $(var snap) {
         let e = legend_entry(snap, s, series)
         return e.found && e.shown == expected
